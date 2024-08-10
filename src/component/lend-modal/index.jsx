@@ -31,7 +31,7 @@ const LendModal = ({
   const screens = useBreakpoint();
 
   const reduxState = useSelector((state) => state);
-  const bnbValue = reduxState.constant.bnbValue;
+  const coinValue = reduxState.constant.coinValue;
 
   const activeWallet = reduxState.wallet.active;
 
@@ -266,7 +266,7 @@ const LendModal = ({
                             ${" "}
                             {(
                               (Number(lendModalData.loanAmount) / ETH_ZERO) *
-                              bnbValue
+                              coinValue
                             ).toFixed(4)}
                           </Text>
 
@@ -306,7 +306,7 @@ const LendModal = ({
                               ((Number(lendModalData.repayAmount) -
                                 Number(lendModalData.loanAmount)) /
                                 ETH_ZERO) *
-                              bnbValue
+                              coinValue
                             ).toFixed(4)}
                           </Text>
 
@@ -346,7 +346,7 @@ const LendModal = ({
                             ${" "}
                             {(
                               (Number(lendModalData.platformFee) / ETH_ZERO) *
-                              bnbValue
+                              coinValue
                             ).toFixed(4)}
                           </Text>
 

@@ -21,7 +21,7 @@ const Lending = (props) => {
   const allBorrowRequest = reduxState.constant.allBorrowRequest;
 
   const btcvalue = reduxState.constant.btcvalue;
-  const bnbValue = reduxState.constant.bnbValue;
+  const coinValue = reduxState.constant.coinValue;
 
   const { Text } = Typography;
   const { useBreakpoint } = Grid;
@@ -163,7 +163,7 @@ const Lending = (props) => {
         const data = calculateOrdinalInBNB(
           Number(obj.floorPrice),
           btcvalue,
-          bnbValue
+          coinValue
         );
         return (
           <Flex align="center" vertical gap={5}>

@@ -1,4 +1,4 @@
-import { Button, Col, Divider, Flex, Row, Tooltip, Typography } from "antd";
+import { Col, Divider, Flex, Row, Tooltip, Typography } from "antd";
 import { ethers } from "ethers";
 import React, { useEffect, useState } from "react";
 import { FaRegSmileWink } from "react-icons/fa";
@@ -39,7 +39,7 @@ const BridgeOrdinals = (props) => {
 
   const walletState = reduxState.wallet;
   const btcValue = reduxState.constant.btcvalue;
-  const bnbValue = reduxState.constant.bnbValue;
+  const coinValue = reduxState.constant.coinValue;
   const userCollateral = reduxState.constant.userCollateral;
   const xverseAddress = walletState.xverse.ordinals.address;
   const unisatAddress = walletState.unisat.address;
@@ -243,7 +243,7 @@ const BridgeOrdinals = (props) => {
                 className="text-color-one font-xsmall letter-spacing-small"
               >
                 <img src={Bitcoin} alt="noimage" width={20} />
-                {(((floor / BTC_ZERO) * btcValue) / bnbValue).toFixed(2)}{" "}
+                {(((floor / BTC_ZERO) * btcValue) / coinValue).toFixed(2)}{" "}
               </Flex>
               ${((floor / BTC_ZERO) * btcValue).toFixed(2)}
             </Flex>

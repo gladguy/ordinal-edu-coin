@@ -42,7 +42,7 @@ const Portfolio = (props) => {
   const userAssets = reduxState.constant.userAssets || [];
 
   const btcValue = reduxState.constant.btcvalue;
-  const bnbValue = reduxState.constant.bnbValue;
+  const coinValue = reduxState.constant.coinValue;
   const metaAddress = walletState.meta.address;
 
   const CONTENT_API = process.env.REACT_APP_ORDINALS_CONTENT_API;
@@ -219,7 +219,9 @@ const Portfolio = (props) => {
                   className="text-color-one font-xsmall letter-spacing-small"
                 >
                   <img src={Bitcoin} alt="noimage" width={20} />
-                  {(((floor / BTC_ZERO) * btcValue) / bnbValue).toFixed(2)}{" "}
+                  {(((floor / BTC_ZERO) * btcValue) / coinValue).toFixed(
+                    2
+                  )}{" "}
                 </Flex>
                 <span className="text-color-two font-xsmall letter-spacing-small">
                   $ {((floor / BTC_ZERO) * btcValue).toFixed(2)}

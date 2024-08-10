@@ -64,12 +64,12 @@ const Footer = (props) => {
 
         <Col>
           <Loading
-            spin={!constantState.bnbValue}
+            spin={!constantState.coinValue}
             indicator={
               <TailSpin stroke="#6a85f1" alignmentBaseline="central" />
             }
           >
-            {constantState.bnbValue ? (
+            {constantState.coinValue ? (
               <Flex gap={5} align="center">
                 <img
                   className="round"
@@ -83,7 +83,7 @@ const Footer = (props) => {
                     breakpoints.xs ? "font-xmsmall" : "font-small"
                   } heading-one`}
                 >
-                  {USDollar.format(constantState.bnbValue)}
+                  {USDollar.format(constantState.coinValue)}
                 </Text>
               </Flex>
             ) : (

@@ -27,7 +27,7 @@ body {
 
 @font-face {
   font-family: soul_font;
-  src: url("./assets/fonts/Type\ Machine.ttf");
+  src: url("./assets/fonts/Type\ Machine.otf");
 }
 
 * {

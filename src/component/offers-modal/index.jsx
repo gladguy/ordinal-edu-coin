@@ -19,7 +19,7 @@ const OffersModal = ({
   const offers = state.constant.offers;
   const metaAddress = state.wallet.meta.address;
   const btcvalue = state.constant.btcvalue;
-  const bnbValue = state.constant.bnbValue;
+  const coinValue = state.constant.coinValue;
 
   const ETH_ZERO = process.env.REACT_APP_ETH_ZERO;
 
@@ -50,7 +50,7 @@ const OffersModal = ({
           ? Number(offerModalData.floorPrice)
           : 30000;
 
-        floor = calculateOrdinalInBNB(floor, btcvalue, bnbValue).ordinalInBNB;
+        floor = calculateOrdinalInBNB(floor, btcvalue, coinValue).ordinalInBNB;
         const loanAmount = Number(obj.loanAmount) / ETH_ZERO;
         const LTV = ((loanAmount / floor) * 100).toFixed(2);
 
@@ -132,7 +132,7 @@ const OffersModal = ({
                       floor = calculateOrdinalInBNB(
                         floor,
                         btcvalue,
-                        bnbValue
+                        coinValue
                       ).ordinalInBNB;
                       const loanAmount = Number(obj.loanAmount) / ETH_ZERO;
                       const LTV = ((loanAmount / floor) * 100).toFixed(2);

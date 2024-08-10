@@ -1,43 +1,15 @@
-import {
-  Col,
-  Divider,
-  Flex,
-  Grid,
-  Layout,
-  Row,
-  Tooltip,
-  Typography,
-} from "antd";
-import { Content, Footer, Header } from "antd/es/layout/layout";
+import { Col, Flex, Layout, Row } from "antd";
+import { Content, Header } from "antd/es/layout/layout";
 import gsap from "gsap";
 import React, { Suspense } from "react";
-import { FaMedium, FaSquareXTwitter, FaTelegram } from "react-icons/fa6";
-import { GrMail } from "react-icons/gr";
-import { SiDiscord } from "react-icons/si";
-import {
-  Link,
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
-import logo from "../../assets/logo/ordinalslogo.png";
+import { Route, Routes, useLocation } from "react-router-dom";
 import LoadingWrapper from "../../component/loading-wrapper";
 import Mainheader from "../../container/footer";
 import Nav from "../../container/nav";
 import { publicRoutes } from "../../routes";
 
 const MainLayout = () => {
-  const { Text } = Typography;
-  const { useBreakpoint } = Grid;
-  const screens = useBreakpoint();
-  const navigate = useNavigate();
   const location = useLocation();
-  const MAIL_TO = process.env.REACT_APP_MAILTO;
-  const ORDINALS_MEDIUM = process.env.REACT_APP_ORDINALS_MEDIUM;
-  const TWITTER_LINK = process.env.REACT_APP_TWITTER_LINK;
-
-  const footerText = `All rights reserved © Copyright ${new Date().getFullYear()}`;
 
   gsap.to(".round", {
     rotation: 360,
@@ -95,10 +67,10 @@ const MainLayout = () => {
           </Content>
 
           <Flex vertical>
-            {location.pathname === "/" ? (
+            {/* {location.pathname === "/" ? (
               <>
                 <Footer className="bg-black mt-20" style={{ padding: "20px" }}>
-                  {/* <Row justify={"center"} className="mt-30">
+                  <Row justify={"center"} className="mt-30">
                     <Col xs={24} md={22}>
                       <Row justify={"space-between"} gutter={20}>
                         <Col md={7}>
@@ -154,7 +126,7 @@ const MainLayout = () => {
                         </Col>
                       </Row>
                     </Col>
-                  </Row> */}
+                  </Row>
 
                   <Row
                     justify={"center"}
@@ -339,7 +311,7 @@ const MainLayout = () => {
                   </Row>
                 </Footer>
               </>
-            ) : null}
+            ) : null} */}
 
             <div className="value-header">
               <Header className="header z-index">

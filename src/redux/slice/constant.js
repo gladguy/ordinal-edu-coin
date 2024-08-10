@@ -5,7 +5,7 @@ const state = {
   loaderTip: "Loading...",
   collection: ["", "", "", "", "", "", "", "", "", "", "", ""],
   btcvalue: null,
-  bnbValue: null,
+  coinValue: null,
   airPoints: null,
   collectionName: null,
   airDropData: {},
@@ -54,8 +54,8 @@ const constantSlice = createSlice({
       state.btcvalue = action.payload;
     },
 
-    setBnbValue: (state, action) => {
-      state.bnbValue = action.payload;
+    setCoinValue: (state, action) => {
+      state.coinValue = action.payload;
     },
 
     setAirDropData: (state, action) => {
@@ -165,7 +165,7 @@ export const {
   setUserBridgeOrdinal,
   setLendRequests,
   setCkBtcAgent,
-  setBnbValue,
+  setCoinValue,
   setCkEthAgent,
   setCkBtcActorAgent,
   setCkEthActorAgent,
