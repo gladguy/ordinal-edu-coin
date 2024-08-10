@@ -325,11 +325,6 @@ export const propsContainer = (Component) => {
       try {
         const coinData = await API_METHODS.get(
           `${process.env.REACT_APP_COINGECKO_API}?ids=${process.env.REACT_APP_TICKER}&vs_currencies=usd`
-          {
-            headers: {
-              Authorization: `Bearer CG-C1ctoxMc9Gmdbnua7zX1hfa7`,
-            },
-          }
         );
 
         if (coinData.data["edu-coin"]) {
