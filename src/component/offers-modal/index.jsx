@@ -2,7 +2,7 @@ import { Col, Flex, Row, Typography } from "antd";
 import Bars from "react-loading-icons/dist/esm/components/bars";
 import { useSelector } from "react-redux";
 import Bitcoin from "../../assets/coin_logo/edu_coin.png";
-import { calculateOrdinalInBNB, getTimeAgo } from "../../utils/common";
+import { calculateOrdinalInCrypto, getTimeAgo } from "../../utils/common";
 import CustomButton from "../Button";
 import ModalDisplay from "../modal";
 import TableComponent from "../table";
@@ -50,7 +50,7 @@ const OffersModal = ({
           ? Number(offerModalData.floorPrice)
           : 30000;
 
-        floor = calculateOrdinalInBNB(floor, btcvalue, coinValue).ordinalInBNB;
+        floor = calculateOrdinalInCrypto(floor, btcvalue, coinValue).ordinalIncrypto;
         const loanAmount = Number(obj.loanAmount) / ETH_ZERO;
         const LTV = ((loanAmount / floor) * 100).toFixed(2);
 
@@ -129,11 +129,11 @@ const OffersModal = ({
                         ? Number(offerModalData.floorPrice)
                         : 30000;
 
-                      floor = calculateOrdinalInBNB(
+                      floor = calculateOrdinalInCrypto(
                         floor,
                         btcvalue,
                         coinValue
-                      ).ordinalInBNB;
+                      ).ordinalIncrypto;
                       const loanAmount = Number(obj.loanAmount) / ETH_ZERO;
                       const LTV = ((loanAmount / floor) * 100).toFixed(2);
                       return (
