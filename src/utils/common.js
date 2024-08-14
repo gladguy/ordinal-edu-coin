@@ -27,11 +27,13 @@ export const UNISAT_WALLET_KEY = "unisat";
 export const MAGICEDEN_WALLET_KEY = "magiceden";
 export const META_WALLET_KEY = "meta";
 export const APTOS_BRAND_KEY = "aptos";
+export const chainId = 656476; // OpenCampus Testnet Chain ID
 export const IS_USER = true;
 export const IS_DEV = true;
 
 export const ordinals = process.env.REACT_APP_ORDINAL_CANISTER_ID;
 export const rootstock = process.env.REACT_APP_ROOTSTOCK_CANISTER_ID;
+export const storage = process.env.REACT_APP_STORAGE_CANISTER_ID;
 export const ordiscan_bearer = process.env.REACT_APP_ORDISCAN_BEARER;
 export const foundaryId = Number(process.env.REACT_APP_FOUNDARY_ID);
 const BTC_ZERO = process.env.REACT_APP_BTC_ZERO;
@@ -136,9 +138,9 @@ export const calculateOrdinalInBNB = (ordinalFloor, BTCPriceInUSD, BNBPriceInUSD
   };
 }
 
-export const IndexContractAddress = "0x5B78CE843E7Be6c3897D1bfb6fBF1474344bCdC2";
-export const TokenContractAddress = "0xDB8971813D745fe0a9C71C2b7f73fb6407027FA2";
-export const BorrowContractAddress = "0xB1ad3119D8713Bf109ff73A60feC2f1Fd2f55536";
+export const IndexContractAddress = process.env.REACT_APP_REGISTRATION;
+export const TokenContractAddress = process.env.REACT_APP_NFT;
+export const BorrowContractAddress = process.env.REACT_APP_LOAN_LEDGER;
 
 export const contractGenerator = async (abi, contractAddress) => {
   const web3 = new Web3(window.ethereum);

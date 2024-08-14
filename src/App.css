@@ -587,7 +587,6 @@ body {
 
 /* Notify background */
 .ant-notification .ant-notification-notice {
-  background: -webkit-linear-gradient(#261344, #2c0287) !important;
   border-radius: 15px !important;
 }
 
@@ -1020,7 +1019,7 @@ input::placeholder {
 }
 
 .ant-modal {
-  top: 80px;
+  top: 30px;
 }
 
 .ant-picker .ant-picker-suffix {

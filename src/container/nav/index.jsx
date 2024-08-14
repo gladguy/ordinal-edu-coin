@@ -43,18 +43,19 @@ import {
   setUnisatCredentials,
   setXverseCredentials,
 } from "../../redux/slice/wallet";
-import { rootstockApiFactory } from "../../rootstock_canister";
+import { storageIdlFactory } from "../../storage_canister";
 import {
   agentCreator,
   API_METHODS,
   apiUrl,
   BTCWallets,
+  chainId,
   IndexContractAddress,
   MAGICEDEN_WALLET_KEY,
   META_WALLET_KEY,
   paymentWallets,
-  rootstock,
   sliceAddress,
+  storage,
   UNISAT_WALLET_KEY,
   XVERSE_WALLET_KEY,
 } from "../../utils/common";
@@ -78,6 +79,7 @@ const Nav = (props) => {
   const magicEdenAddress = walletState.magicEden.ordinals.address;
 
   const [isConnectModal, setConnectModal] = useState(false);
+  const [tabKey, setTabKey] = useState("1");
   const [open, setOpen] = useState(false);
   const [screenDimensions, setScreenDimensions] = React.useState({
     width: window.screen.width,
@@ -86,6 +88,7 @@ const Nav = (props) => {
   const [current, setCurrent] = useState();
   const [activeConnections, setActiveConnections] = useState([]);
   const [walletConnection, setWalletConnection] = useState({});
+  const [activeAddresses, setActiveAddresses] = useState({});
 
   const avatar = process.env.REACT_APP_AVATAR;
   const SatsConnectNamespace = "sats-connect:";
@@ -249,9 +252,6 @@ const Nav = (props) => {
 
             const xverseBtc =
               result.data.data.satoshi / process.env.REACT_APP_BTC_ZERO;
-
-            // dispatch(setXverseBtc(xverseBtc));
-
             setWalletConnection({
               ...walletConnection,
               [XVERSE_WALLET_KEY]: {
@@ -260,9 +260,11 @@ const Nav = (props) => {
                 btcBalance: xverseBtc,
               },
             });
-            // collapseConnectedModal();
             setActiveConnections([...activeConnections, XVERSE_WALLET_KEY]);
-
+            setActiveAddresses({
+              ...activeAddresses,
+              [XVERSE_WALLET_KEY]: ordinals.address,
+            });
             successMessageNotify("x-verse Wallet connected!");
           }
         },
@@ -282,15 +284,6 @@ const Nav = (props) => {
           let publicKey = await window.unisat.getPublicKey();
           let { confirmed: BtcBalance } = await window.unisat.getBalance();
           dispatch(setLoading(false));
-
-          // collapseConnectedModal();
-          // dispatch(
-          //   setUnisatCredentials({
-          //     address: accounts[0],
-          //     publicKey,
-          //     BtcBalance: BtcBalance / process.env.REACT_APP_BTC_ZERO,
-          //   })
-          // );
           setWalletConnection({
             ...walletConnection,
             [UNISAT_WALLET_KEY]: {
@@ -300,7 +293,10 @@ const Nav = (props) => {
             },
           });
           setActiveConnections([...activeConnections, UNISAT_WALLET_KEY]);
-
+          setActiveAddresses({
+            ...activeAddresses,
+            [UNISAT_WALLET_KEY]: accounts[0],
+          });
           successMessageNotify("Unisat Wallet connected!");
         } catch (error) {
           dispatch(setLoading(false));
@@ -342,15 +338,6 @@ const Nav = (props) => {
 
             const magicEdenBtc =
               result.data.data.satoshi / process.env.REACT_APP_BTC_ZERO;
-
-            // dispatch(
-            //   setMagicEdenCredentials({
-            //     ordinals,
-            //     payment,
-            //     btcBalance: magicEdenBtc,
-            //   })
-            // );
-
             setWalletConnection({
               ...walletConnection,
               [MAGICEDEN_WALLET_KEY]: {
@@ -360,7 +347,10 @@ const Nav = (props) => {
               },
             });
             setActiveConnections([...activeConnections, MAGICEDEN_WALLET_KEY]);
-            // collapseConnectedModal();
+            setActiveAddresses({
+              ...activeAddresses,
+              [MAGICEDEN_WALLET_KEY]: ordinals.address,
+            });
             successMessageNotify("Magiceden Wallet connected!");
           },
           onCancel: () => {
@@ -379,9 +369,44 @@ const Nav = (props) => {
           const accounts = await web3.eth.getAccounts();
           const networkId = await web3.eth.net.getId();
 
-          if (Number(networkId) !== 656476) {
+          if (Number(networkId) !== chainId) {
             Notify("error", "Switch to the EDU open campus network!");
-            return;
+            try {
+              await window.ethereum.request({
+                method: "wallet_switchEthereumChain",
+                params: [{ chainId }],
+              });
+            } catch (switchError) {
+              if (switchError.code === 4902) {
+                // This error code indicates that the chain has not been added to MetaMask.
+                try {
+                  await window.ethereum.request({
+                    method: "wallet_addEthereumChain",
+                    params: [
+                      {
+                        chainId,
+                        chainName: "Open Campus",
+                        rpcUrls: [
+                          "https://rpc.open-campus-codex.gelato.digital/",
+                        ],
+                        blockExplorerUrls: [
+                          "https://opencampus-codex.blockscout.com/",
+                        ],
+                        nativeCurrency: {
+                          name: "EDU Token",
+                          symbol: "EDU", // Replace with the symbol of the native token
+                          decimals: 18,
+                        },
+                      },
+                    ],
+                  });
+                } catch (addError) {
+                  console.error("Failed to add the network:", addError);
+                }
+              } else {
+                console.error("Failed to switch the network:", switchError);
+              }
+            }
           }
           setWalletConnection({
             ...walletConnection,
@@ -391,6 +416,10 @@ const Nav = (props) => {
             },
           });
           setActiveConnections([...activeConnections, META_WALLET_KEY]);
+          setActiveAddresses({
+            ...activeAddresses,
+            [META_WALLET_KEY]: accounts[0],
+          });
         } catch (error) {
           console.error("User denied account access", error);
         }
@@ -423,7 +452,7 @@ const Nav = (props) => {
     try {
       dispatch(setLoading(true));
       let isConnectionExist = false;
-      const API = agentCreator(rootstockApiFactory, rootstock);
+      const API = agentCreator(storageIdlFactory, storage);
       const btcAddress = walletConnection?.xverse
         ? walletConnection.xverse.ordinals.address
         : walletConnection?.magiceden
@@ -431,9 +460,6 @@ const Nav = (props) => {
         : walletConnection?.unisat?.address;
       const metaAddress = walletConnection.meta.address;
 
-      const isBtcExist = await API.retrieveByEthereumAddress(metaAddress);
-      const isEthExist = await API.retrieveByBitcoinAddress(btcAddress);
-      const isCounterExist = await API.retrieve(metaAddress);
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const contract = new ethers.Contract(
@@ -444,48 +470,56 @@ const Nav = (props) => {
       const isAcExist = await contract.getBitcoinAddressId(metaAddress);
       const isAccountExistInABI = Number(isAcExist.toString());
 
-      // console.log(isBtcExist, isEthExist, isCounterExist, isAccountExistInABI);
+      let verifyAddress = await API.verifyAddressPair({
+        chain_id: chainId,
+        bitcoinAddress: btcAddress,
+        ethereumAddress: metaAddress,
+      });
+      verifyAddress = Number(verifyAddress);
 
-      if (
-        isAccountExistInABI &&
-        isEthExist[0] === metaAddress &&
-        isBtcExist[0] === btcAddress
-      ) {
+      if (verifyAddress === 0 && isAccountExistInABI) {
         isConnectionExist = true;
-      } else if (
-        (!isBtcExist.length && !isEthExist.length) ||
-        !isAccountExistInABI
-      ) {
-        let counter;
-        if (isCounterExist.length) {
-          counter = isCounterExist[0];
-        } else {
-          counter = await API.storeAddress({
-            bitcoinAddress: btcAddress,
-            ethereumAddress: metaAddress,
-          });
-        }
+      } else if (verifyAddress === 1) {
+        const btcAddress = await API.getByEthereumAddress({
+          chainId: chainId,
+          ethereumAddress: metaAddress,
+        });
+        Notify(
+          "warning",
+          `Account not found, try connecting ${btcAddress} BTC account!`
+        );
+      } else if (verifyAddress === 2) {
+        const ethAddress = await API.getByBitcoinAddress({
+          chainId: chainId,
+          bitcoinAddress: btcAddress,
+        });
+        Notify(
+          "warning",
+          `Account not found, try connecting ${ethAddress} ETH account!`
+        );
+      } else if (verifyAddress === 3) {
+        const storeAddress = await API.storeAddress({
+          chain_id: chainId,
+          bitcoinAddress: btcAddress,
+          ethereumAddress: metaAddress,
+        });
+        console.log(
+          "storeAddress",
+          storeAddress,
+          "isAccountExistInABI",
+          isAccountExistInABI
+        );
+
         if (!isAccountExistInABI) {
           const saveResult = await contract.saveBitcoinAddress(
-            Number(counter),
+            Number(storeAddress),
             metaAddress
           );
-
           if (saveResult.hash) {
             Notify("success", "Account creation success!", 3000);
           }
         }
         isConnectionExist = true;
-      } else if (isEthExist[0] !== metaAddress) {
-        Notify(
-          "warning",
-          "Account not found, try connecting other ETH account!"
-        );
-      } else if (isBtcExist[0] !== btcAddress) {
-        Notify(
-          "warning",
-          "Account not found, try connecting other BTC account!"
-        );
       }
 
       if (isConnectionExist) {
@@ -498,6 +532,9 @@ const Nav = (props) => {
       dispatch(setLoading(false));
     } catch (error) {
       dispatch(setLoading(false));
+      setWalletConnection({});
+      setActiveConnections([]);
+      setActiveAddresses({});
       console.log("finish connection error", error);
     }
   };
@@ -908,7 +945,7 @@ const Nav = (props) => {
           setWalletConnection({});
           setActiveConnections([]);
         }}
-        width={breakPoint.xs ? "100%" : "32%"}
+        width={breakPoint.xs ? "100%" : "35%"}
       >
         <Row justify={"start"} align={"middle"}>
           <Text
@@ -945,9 +982,33 @@ const Nav = (props) => {
           </Text>
         </Row>
 
+        <Row justify={"center"}>
+          <Divider />
+        </Row>
+
+        {Object.entries(activeAddresses).map((wallet) => {
+          const [walletName, address] = wallet;
+          return (
+            <Row>
+              <Flex gap={15}>
+                <Text className="text-color-one font-medium">
+                  {walletName === "meta" ? "Payment" : "Ordinals"} {"-->"}
+                </Text>
+                <Text className="text-color-four font-small">
+                  {sliceAddress(address, 9)} {addressRendererWithCopy(address)}
+                </Text>
+              </Flex>
+            </Row>
+          );
+        })}
+
         <Row>
-          <Col>
+          <Col xs={24}>
             <Tabs
+              activeKey={tabKey}
+              onChange={(e) => {
+                e !== "3" && setTabKey(e);
+              }}
               items={[
                 {
                   key: "1",
