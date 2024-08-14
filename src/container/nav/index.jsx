@@ -1165,7 +1165,7 @@ const Nav = (props) => {
               <Flex align="center">
                 <img
                   src={logo}
-                  alt="bnb"
+                  alt="logo"
                   style={{ marginRight: "20px" }}
                   width={25}
                 />

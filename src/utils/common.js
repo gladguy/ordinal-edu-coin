@@ -122,7 +122,7 @@ function fractionToFixed(numerator, denominator, minDecimalPlaces = 2, maxDecima
   return formattedValue;
 }
 
-export const calculateOrdinalInBNB = (ordinalFloor, BTCPriceInUSD, BNBPriceInUSD) => {
+export const calculateOrdinalInCrypto = (ordinalFloor, BTCPriceInUSD, CryptoPriceInUSD) => {
   // Calculate Floor to USD
   const floorInUSD = ordinalFloor / BTC_ZERO;
 
@@ -130,11 +130,11 @@ export const calculateOrdinalInBNB = (ordinalFloor, BTCPriceInUSD, BNBPriceInUSD
   const ordinalInUSD = floorInUSD * BTCPriceInUSD;
 
   // Calculate ordinal price in BNB
-  const ordinalInBNB = fractionToFixed(ordinalInUSD, BNBPriceInUSD);
+  const ordinalIncrypto = fractionToFixed(ordinalInUSD, CryptoPriceInUSD);
 
   return {
     ordinalInUSD: ordinalInUSD.toFixed(2),
-    ordinalInBNB: ordinalInBNB
+    ordinalIncrypto: ordinalIncrypto
   };
 }
 

@@ -12,7 +12,7 @@ import OffersModal from "../../component/offers-modal";
 import TableComponent from "../../component/table";
 import { propsContainer } from "../../container/props-container";
 import { setOffers } from "../../redux/slice/constant";
-import { calculateOrdinalInBNB } from "../../utils/common";
+import { calculateOrdinalInCrypto } from "../../utils/common";
 
 const Lending = (props) => {
   const { reduxState, dispatch } = props.redux;
@@ -160,7 +160,7 @@ const Lending = (props) => {
       align: "center",
       dataIndex: "floor",
       render: (_, obj) => {
-        const data = calculateOrdinalInBNB(
+        const data = calculateOrdinalInCrypto(
           Number(obj.floorPrice),
           btcvalue,
           coinValue
@@ -170,7 +170,7 @@ const Lending = (props) => {
             <Flex align="center" vertical gap={5} className={"text-color-one"}>
               <Flex align="center" gap={3}>
                 <img src={Bitcoin} alt="noimage" width={20} />{" "}
-                {data.ordinalInBNB}
+                {data.ordinalIncrypto}
               </Flex>
               ${data.ordinalInUSD}
             </Flex>

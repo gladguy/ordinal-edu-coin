@@ -34,7 +34,7 @@ import {
   META_WALLET_KEY,
   TokenContractAddress,
   calculateDailyInterestRate,
-  calculateOrdinalInBNB,
+  calculateOrdinalInCrypto,
 } from "../../utils/common";
 import tokensJson from "../../utils/tokens_abi.json";
 
@@ -211,7 +211,7 @@ const Borrowing = (props) => {
       align: "center",
       dataIndex: "floor",
       render: (_, obj) => {
-        const data = calculateOrdinalInBNB(
+        const data = calculateOrdinalInCrypto(
           Number(obj.floorPrice),
           btcvalue,
           coinValue
@@ -221,7 +221,7 @@ const Borrowing = (props) => {
             <Flex align="center" vertical gap={5} className={"text-color-one"}>
               <Flex align="center" gap={3}>
                 <img src={Bitcoin} alt="noimage" width={20} />{" "}
-                {data.ordinalInBNB}
+                {data.ordinalIncrypto}
               </Flex>
               ${data.ordinalInUSD}
             </Flex>
@@ -249,11 +249,11 @@ const Borrowing = (props) => {
               const floor = Number(obj.floorPrice)
                 ? Number(obj.floorPrice)
                 : 30000;
-              const floorPrice = calculateOrdinalInBNB(
+              const floorPrice = calculateOrdinalInCrypto(
                 floor,
                 btcvalue,
                 coinValue
-              ).ordinalInBNB;
+              ).ordinalIncrypto;
 
               // Assets
               let assets = collateralData?.filter(
