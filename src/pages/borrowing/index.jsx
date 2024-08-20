@@ -212,7 +212,7 @@ const Borrowing = (props) => {
       dataIndex: "floor",
       render: (_, obj) => {
         const data = calculateOrdinalInCrypto(
-          Number(obj.floorPrice),
+          Number(obj.floorPrice) ? Number(obj.floorPrice) : 30000,
           btcvalue,
           coinValue
         );
