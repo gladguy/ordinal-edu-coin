@@ -49,6 +49,18 @@ Contributions are welcome! Please fork this repository and submit a pull request
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
 
+### How it Works
+
+- **Borrower Actions:** Borrowers can bridge their Ordinals, mint them as Open Campus NFTs, and create borrow requests using the Loan Ledger.
+- **Lender Actions:** Lenders can view and accept borrow requests, which locks the NFT as collateral.
+- **Smart Contract Actions:** The smart contract manages the collateral, releasing it back to the Borrower if the loan is repaid or transferring it to the lender if not.
+- **Infrastructure:** The entire DApp is powered by the Open Campus Blockchain.
+
+### GitHub Integration
+
+Copy the simplified Mermaid code into your `README.md` file on GitHub, and it should render correctly, illustrating the protocol's workflow.
+
+
 ```mermaid
 graph TD
     Borrower -->|Bridge Ordinals| OrdinalsBridgedNFT
@@ -62,13 +74,3 @@ graph TD
     SmartContract -->|Powered By| OpenCampusBlockchain
 
 
-### How it Works
-
-- **Borrower Actions:** Borrowers can bridge their Ordinals, mint them as Open Campus NFTs, and create borrow requests using the Loan Ledger.
-- **Lender Actions:** Lenders can view and accept borrow requests, which locks the NFT as collateral.
-- **Smart Contract Actions:** The smart contract manages the collateral, releasing it back to the Borrower if the loan is repaid or transferring it to the lender if not.
-- **Infrastructure:** The entire DApp is powered by the Open Campus Blockchain.
-
-### GitHub Integration
-
-Copy the simplified Mermaid code into your `README.md` file on GitHub, and it should render correctly, illustrating the protocol's workflow.
