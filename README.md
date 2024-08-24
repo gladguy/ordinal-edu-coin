@@ -10,7 +10,7 @@ This contract handles the bridging of Ordinals to mint them as Open Campus NFTs.
 - **Contract Address:** [0xDB8971813D745fe0a9C71C2b7f73fb6407027FA2](https://opencampus-codex.blockscout.com/address/0xDB8971813D745fe0a9C71C2b7f73fb6407027FA2?tab=contract)
   
 ### Registration
-This contract manages Borrower registration within the protocol.
+This contract manages Borrower/Lender registration within the protocol.
 
 - **Contract Address:** [0x5B78CE843E7Be6c3897D1bfb6fBF1474344bCdC2](https://opencampus-codex.blockscout.com/address/0x5B78CE843E7Be6c3897D1bfb6fBF1474344bCdC2?tab=contract)
 
@@ -23,7 +23,7 @@ This contract records and manages the loan requests, NFT collateral, and loan re
 
 1. **Bridge Ordinals**: Borrowers can bridge their Ordinals to mint them as Open Campus NFTs using the [Ordinals Bridged NFT Contract](https://opencampus-codex.blockscout.com/address/0xDB8971813D745fe0a9C71C2b7f73fb6407027FA2?tab=contract).
 
-2. **Register**: Borrowers must register on the platform using the [Registration Contract](https://opencampus-codex.blockscout.com/address/0x5B78CE843E7Be6c3897D1bfb6fBF1474344bCdC2?tab=contract).
+2. **Register**: Borrowers/Lenders must register on the platform using the [Registration Contract](https://opencampus-codex.blockscout.com/address/0x5B78CE843E7Be6c3897D1bfb6fBF1474344bCdC2?tab=contract).
 
 3. **Create Borrow Request**: After minting their NFTs, Borrowers can create a borrow request by locking their NFTs as collateral through the [Loan Ledger Contract](https://opencampus-codex.blockscout.com/address/0xB1ad3119D8713Bf109ff73A60feC2f1Fd2f55536?tab=contract).
 
