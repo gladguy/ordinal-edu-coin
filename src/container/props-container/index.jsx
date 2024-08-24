@@ -16,7 +16,7 @@ import {
   setUserAssets,
   setUserCollateral,
 } from "../../redux/slice/constant";
-import { rootstockApiFactory } from "../../rootstock_canister";
+import { rootstockApiFactory } from "../../opencampus_canister";
 import borrowJson from "../../utils/borrow_abi.json";
 import {
   API_METHODS,

@@ -1,0 +1,29 @@
+@startuml
+actor User
+actor Lender
+
+usecase "Bridge Ordinals" as UC1
+usecase "Mint Ordinals as Open Campus NFT" as UC2
+usecase "Create Borrow Request" as UC3
+usecase "View Borrow Requests" as UC4
+usecase "Accept Borrow Request" as UC5
+usecase "Lock NFT in Smart Contract" as UC6
+usecase "Repay Loan" as UC7
+usecase "Release NFT" as UC8
+usecase "Transfer NFT to Lender" as UC9
+
+User --> UC1
+User --> UC2
+User --> UC3
+Lender --> UC4
+UC4 --> UC5
+
+User --> UC7
+UC3 --> UC6
+UC5 --> UC6
+UC7 --> UC8
+UC6 --> UC9
+
+UC8 <-- UC7 : If Loan Repaid
+UC9 <-- UC6 : If Loan Unpaid
+@enduml
