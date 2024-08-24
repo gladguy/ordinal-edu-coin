@@ -56,9 +56,6 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 - **Smart Contract Actions:** The smart contract manages the collateral, releasing it back to the Borrower if the loan is repaid or transferring it to the lender if not.
 - **Infrastructure:** The entire DApp is powered by the Open Campus Blockchain.
 
-### GitHub Integration
-
-Copy the simplified Mermaid code into your `README.md` file on GitHub, and it should render correctly, illustrating the protocol's workflow.
 
 
 ```mermaid
