@@ -1,12 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { MAGICEDEN_WALLET_KEY, META_WALLET_KEY, UNISAT_WALLET_KEY, XVERSE_WALLET_KEY } from "../../utils/common";
+import { MAGICEDEN_WALLET_KEY, META_WALLET_KEY, UNISAT_WALLET_KEY } from "../../utils/common";
 
 const state = {
-  xverse: {
-    ordinals: {},
-    payment: {},
-    btcBalance: 0.0,
-  },
   magicEden: {
     ordinals: {},
     payment: {},
@@ -29,11 +24,6 @@ const walletSlice = createSlice({
   initialState: state,
   reducers: {
 
-    setXverseCredentials: (state, action) => {
-      state.xverse = action.payload;
-      state.active.push(XVERSE_WALLET_KEY);
-    },
-
     setMetaCredentials: (state, action) => {
       state.meta = action.payload;
       state.active.push(META_WALLET_KEY);
@@ -50,12 +40,6 @@ const walletSlice = createSlice({
     },
 
     clearWalletState: (state) => {
-      state.xverse = {
-        ordinals: {},
-        payment: {},
-        signature: null,
-        btcBalance: 0.0,
-      }
       state.magicEden = {
         ordinals: {},
         payment: {},
@@ -78,7 +62,6 @@ const walletSlice = createSlice({
 });
 
 export const {
-  setXverseCredentials,
   setMetaCredentials,
   setUnisatCredentials,
   setMagicEdenCredentials,

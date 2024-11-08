@@ -15,6 +15,7 @@ import {
   Typography,
 } from "antd";
 import { ethers } from "ethers";
+import { motion } from "framer-motion";
 import gsap from "gsap";
 import React, { useEffect, useRef, useState } from "react";
 import { AiOutlineDisconnect } from "react-icons/ai";
@@ -41,7 +42,6 @@ import {
   setMagicEdenCredentials,
   setMetaCredentials,
   setUnisatCredentials,
-  setXverseCredentials,
 } from "../../redux/slice/wallet";
 import { storageIdlFactory } from "../../storage_canister";
 import {
@@ -57,7 +57,6 @@ import {
   sliceAddress,
   storage,
   UNISAT_WALLET_KEY,
-  XVERSE_WALLET_KEY,
 } from "../../utils/common";
 import indexJson from "../../utils/index_abi.json";
 import { propsContainer } from "../props-container";
@@ -74,7 +73,6 @@ const Nav = (props) => {
   const walletState = reduxState.wallet;
   const activeWallet = reduxState.wallet.active;
   const metaAddress = walletState.meta.address;
-  const xverseAddress = walletState.xverse.ordinals.address;
   const unisatAddress = walletState.unisat.address;
   const magicEdenAddress = walletState.magicEden.ordinals.address;
 
@@ -220,62 +218,7 @@ const Nav = (props) => {
   }
 
   const connectWallet = async (walletName) => {
-    if (walletName === XVERSE_WALLET_KEY) {
-      const getAddressOptions = {
-        payload: {
-          purposes: [AddressPurpose.Ordinals, AddressPurpose.Payment],
-          message: "Address for receiving Ordinals and payments",
-          network: {
-            type: BitcoinNetworkType.Mainnet,
-          },
-        },
-        onFinish: async (response) => {
-          if (response.addresses) {
-            const { addresses } = response;
-            const ordinals = addresses.find(
-              (ele) => ele.purpose === AddressPurpose.Ordinals
-            );
-            const payment = addresses.find(
-              (ele) => ele.purpose === AddressPurpose.Payment
-            );
-            // dispatch(setXversePayment(payment));
-            // dispatch(setXverseOrdinals(ordinals));
-
-            const result = await API_METHODS.get(
-              `${apiUrl.Unisat_open_api}/v1/indexer/address/${payment.address}/balance`,
-              {
-                headers: {
-                  Authorization: `Bearer ${process.env.REACT_APP_UNISAT_BEARER}`,
-                },
-              }
-            );
-
-            const xverseBtc =
-              result.data.data.satoshi / process.env.REACT_APP_BTC_ZERO;
-            setWalletConnection({
-              ...walletConnection,
-              [XVERSE_WALLET_KEY]: {
-                ordinals: ordinals,
-                payment: payment,
-                btcBalance: xverseBtc,
-              },
-            });
-            setActiveConnections([...activeConnections, XVERSE_WALLET_KEY]);
-            setActiveAddresses({
-              ...activeAddresses,
-              [XVERSE_WALLET_KEY]: ordinals.address,
-            });
-            successMessageNotify("x-verse Wallet connected!");
-          }
-        },
-        onCancel: () => errorMessageNotify("User rejected the request."),
-      };
-      try {
-        await getAddress(getAddressOptions);
-      } catch (error) {
-        errorMessageNotify(error.message);
-      }
-    } else if (walletName === UNISAT_WALLET_KEY) {
+    if (walletName === UNISAT_WALLET_KEY) {
       // UNISAT
       if (typeof window.unisat !== "undefined") {
         try {
@@ -384,8 +327,8 @@ const Nav = (props) => {
                     method: "wallet_addEthereumChain",
                     params: [
                       {
-                        chainId,
-                        chainName: "Open Campus",
+                        chainId: "0xA045C",
+                        chainName: "Open Campus Codex",
                         rpcUrls: [
                           "https://rpc.open-campus-codex.gelato.digital/",
                         ],
@@ -438,8 +381,6 @@ const Nav = (props) => {
   const storeWallets = (wallet) => {
     if (META_WALLET_KEY === wallet) {
       dispatch(setMetaCredentials(walletConnection[META_WALLET_KEY]));
-    } else if (XVERSE_WALLET_KEY === wallet) {
-      dispatch(setXverseCredentials(walletConnection[XVERSE_WALLET_KEY]));
     } else if (UNISAT_WALLET_KEY === wallet) {
       dispatch(setUnisatCredentials(walletConnection[UNISAT_WALLET_KEY]));
     } else {
@@ -476,6 +417,7 @@ const Nav = (props) => {
         ethereumAddress: metaAddress,
       });
       verifyAddress = Number(verifyAddress);
+      console.log("verifyAddress", verifyAddress);
 
       if (verifyAddress === 0 && isAccountExistInABI) {
         isConnectionExist = true;
@@ -511,16 +453,21 @@ const Nav = (props) => {
         );
 
         if (!isAccountExistInABI) {
+          console.log("Inside");
+
           const saveResult = await contract.saveBitcoinAddress(
             Number(storeAddress),
             metaAddress
           );
+          console.log("saveResult", saveResult);
+
           if (saveResult.hash) {
             Notify("success", "Account creation success!", 3000);
           }
         }
         isConnectionExist = true;
       }
+      console.log("isConnectionExist", isConnectionExist);
 
       if (isConnectionExist) {
         activeConnections.forEach((wallet) => {
@@ -551,23 +498,11 @@ const Nav = (props) => {
     if (connected) return "card-disabled";
     const cond = (bool) => (bool ? "card-disabled" : "");
     switch (key) {
-      case XVERSE_WALLET_KEY: {
-        return cond(
-          activeConnections.includes(UNISAT_WALLET_KEY) ||
-            activeConnections.includes(MAGICEDEN_WALLET_KEY)
-        );
-      }
       case UNISAT_WALLET_KEY: {
-        return cond(
-          activeConnections.includes(XVERSE_WALLET_KEY) ||
-            activeConnections.includes(MAGICEDEN_WALLET_KEY)
-        );
+        return cond(activeConnections.includes(MAGICEDEN_WALLET_KEY));
       }
       case MAGICEDEN_WALLET_KEY: {
-        return cond(
-          activeConnections.includes(XVERSE_WALLET_KEY) ||
-            activeConnections.includes(UNISAT_WALLET_KEY)
-        );
+        return cond(activeConnections.includes(UNISAT_WALLET_KEY));
       }
       default:
         return "";
@@ -698,9 +633,7 @@ const Nav = (props) => {
   const avatarRenderer = (width) => (
     <img
       src={`${avatar}/svg?seed=${
-        xverseAddress
-          ? xverseAddress
-          : unisatAddress
+        unisatAddress
           ? unisatAddress
           : magicEdenAddress
           ? magicEdenAddress
@@ -733,16 +666,31 @@ const Nav = (props) => {
         <Col>
           <Row align={"middle"}>
             <Col>
-              <img
-                src={myordinalslogo}
-                alt="logo"
-                className="pointer"
-                width={65}
-                onClick={() => {
-                  navigate("/");
-                  dispatch(setLendHeader(false));
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ rotate: 360, scale: 1, opacity: 1 }}
+                whileHover={{
+                  scale: 0.8,
+                  rotate: -45,
                 }}
-              />
+                transition={{
+                  type: "spring",
+                  stiffness: 260,
+                  damping: 20,
+                  delay: 0.5,
+                }}
+              >
+                <img
+                  src={myordinalslogo}
+                  alt="logo"
+                  className="pointer"
+                  width={65}
+                  onClick={() => {
+                    navigate("/");
+                    dispatch(setLendHeader(false));
+                  }}
+                />
+              </motion.div>
             </Col>
           </Row>
         </Col>
@@ -1103,9 +1051,7 @@ const Nav = (props) => {
               <Flex gap={10} align="center">
                 {avatarRenderer(45)}
                 <Text className="text-color-one">
-                  {xverseAddress ? (
-                    <>{sliceAddress(xverseAddress, 5)}</>
-                  ) : unisatAddress ? (
+                  {unisatAddress ? (
                     <>{sliceAddress(unisatAddress, 5)}</>
                   ) : magicEdenAddress ? (
                     <>{sliceAddress(magicEdenAddress, 5)}</>
@@ -1214,12 +1160,7 @@ const Nav = (props) => {
                 <Flex vertical>
                   <Text className="text-color-two font-medium">Ordinals</Text>
                   <Text className="text-color-one font-xsmall">
-                    {xverseAddress ? (
-                      <>
-                        {sliceAddress(xverseAddress, 9)}{" "}
-                        {addressRendererWithCopy(xverseAddress)}
-                      </>
-                    ) : unisatAddress ? (
+                    {unisatAddress ? (
                       <>
                         {sliceAddress(unisatAddress, 9)}{" "}
                         {addressRendererWithCopy(unisatAddress)}
@@ -1248,8 +1189,7 @@ const Nav = (props) => {
             </Col> */}
 
             <Col>
-              {walletState.active.includes(XVERSE_WALLET_KEY) ||
-              walletState.active.includes(UNISAT_WALLET_KEY) ||
+              {walletState.active.includes(UNISAT_WALLET_KEY) ||
               walletState.active.includes(MAGICEDEN_WALLET_KEY) ? null : (
                 <CustomButton
                   className="font-size-18 black-bg text-color-one border-none"

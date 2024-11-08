@@ -33,6 +33,7 @@ import {
   DateTimeConverter,
   sliceAddress,
 } from "../../utils/common";
+import axios from "axios";
 
 const Portfolio = (props) => {
   const { reduxState, dispatch } = props.redux;
@@ -51,6 +52,9 @@ const Portfolio = (props) => {
 
   const { Text } = Typography;
   const [copy, setCopy] = useState("Copy");
+  const [assets, setAssets] = useState([]);
+  // console.log(assets);
+
   const [downloadWalletModal, setDownloadWalletModal] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [handleSupplyModal, setHandleSupplyModal] = useState(false);
@@ -153,50 +157,14 @@ const Portfolio = (props) => {
       render: (_, obj) => (
         <>
           <Flex gap={5} vertical align="center">
-            {obj.contentType === "image/webp" ||
-            obj.contentType === "image/jpeg" ||
-            obj.contentType === "image/png" ? (
-              <img
-                src={`${CONTENT_API}/content/${obj.id}`}
-                alt={`${obj.id}-borrow_image`}
-                className="border-radius-30"
-                width={70}
-                height={70}
-              />
-            ) : obj.contentType === "image/svg" ||
-              obj.contentType === "text/html;charset=utf-8" ||
-              obj.contentType === "text/html" ||
-              obj.contentType === "image/svg+xml" ? (
-              <iframe
-                loading="lazy"
-                width={"80px"}
-                height={"80px"}
-                style={{ border: "none", borderRadius: "20%" }}
-                src={`${CONTENT_API}/content/${obj.id}`}
-                title="svg"
-                sandbox="allow-scripts"
-              >
-                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                  <image href={`${CONTENT_API}/content/${obj.id}`} />
-                </svg>
-              </iframe>
-            ) : (
-              <img
-                src={`${
-                  obj?.meta?.collection_page_img_url
-                    ? obj?.meta?.collection_page_img_url
-                    : `${process.env.PUBLIC_URL}/collections/${obj?.collectionSymbol}`
-                }`}
-                onError={(e) =>
-                  (e.target.src = `${process.env.PUBLIC_URL}/collections/${obj?.collectionSymbol}.png`)
-                }
-                alt={`${obj.id}-borrow_image`}
-                className="border-radius-30"
-                width={70}
-                height={70}
-              />
-            )}
-            {obj.displayName}
+            <img
+              src={obj.display_image_url}
+              alt={`${obj.id}-borrow_image`}
+              className="border-radius-30"
+              width={70}
+              height={70}
+            />
+            {obj.name}
           </Flex>
         </>
       ),
@@ -207,24 +175,22 @@ const Portfolio = (props) => {
       align: "center",
       dataIndex: "value",
       render: (_, obj) => {
-        const floor = Number(obj.collection.floorPrice)
-          ? Number(obj.collection.floorPrice)
+        const floor = Number(obj?.price?.floor_price)
+          ? Number(obj?.price?.floor_price)
           : 30000;
         return (
           <>
-            {obj.collection.floorPrice ? (
+            {obj?.price?.floor_price ? (
               <Flex vertical align="center">
                 <Flex
                   align="center"
                   className="text-color-one font-xsmall letter-spacing-small"
                 >
                   <img src={Bitcoin} alt="noimage" width={20} />
-                  {(((floor / BTC_ZERO) * btcValue) / coinValue).toFixed(
-                    2
-                  )}{" "}
+                  {((floor * btcValue) / coinValue).toFixed(2)}{" "}
                 </Flex>
                 <span className="text-color-two font-xsmall letter-spacing-small">
-                  $ {((floor / BTC_ZERO) * btcValue).toFixed(2)}
+                  $ {(floor * btcValue).toFixed(2)}
                 </span>
               </Flex>
             ) : (
@@ -478,13 +444,37 @@ const Portfolio = (props) => {
   useEffect(() => {
     if (activeWallet.length) {
       (async () => {
-        fetchLendingRequests();
-        fetchBorrowingRequests();
-        fetchUserRequests();
+        // fetchLendingRequests();
+        // fetchBorrowingRequests();
+        // fetchUserRequests();
       })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWallet]);
+
+  const fetchFloorPrice = async () => {
+    const price = userAssets.map((collection) => {
+      return new Promise(async (res) => {
+        const result = await axios.get(
+          `${process.env.REACT_APP_OPENSEA_API}/api/v2/collections/${collection.collection}/stats`,
+          {
+            headers: {
+              "x-api-key": process.env.REACT_APP_OPENSEA_APIKEY,
+            },
+          }
+        );
+        res({ ...collection, price: result.data.total });
+      });
+    });
+    const revealedPromise = await Promise.all(price);
+    setAssets(revealedPromise);
+  };
+
+  useEffect(() => {
+    if (userAssets[0]) {
+      fetchFloorPrice();
+    }
+  }, []);
 
   return (
     <>
@@ -627,7 +617,7 @@ const Portfolio = (props) => {
                         `${e?.id}-${e?.inscriptionNumber}-${Math.random()}`
                       }
                       tableColumns={AssetsToSupplyTableColumns}
-                      tableData={userAssets}
+                      tableData={assets}
                     />
                   </Col>
                 </Row>

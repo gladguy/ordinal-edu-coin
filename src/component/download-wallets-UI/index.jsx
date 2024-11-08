@@ -5,12 +5,10 @@ import magiceden from "../../assets/brands/magiceden.svg";
 import myordinals from "../../assets/logo/ordinalslogo.png";
 import metamask from "../../assets/wallet-logo/meta.png";
 import unisat from "../../assets/wallet-logo/unisat_logo.png";
-import xverse from "../../assets/wallet-logo/xverse_logo_whitebg.png";
 
 const WalletUI = ({ isAirdrop, isPlugError }) => {
   const { Text } = Typography;
   const unisatLink = process.env.REACT_APP_UNISAT;
-  const xverseLink = process.env.REACT_APP_XVERSE;
   const magicedenLink = process.env.REACT_APP_MAGICEDEN;
   const metaLink = process.env.REACT_APP_META;
 
@@ -73,15 +71,6 @@ const WalletUI = ({ isAirdrop, isPlugError }) => {
                     className="pointer"
                     width={60}
                   />
-                </Link>
-              </Col>
-              <Col>
-                <Link
-                  className="iconalignment float-up-medium"
-                  target="_blank"
-                  to={xverseLink}
-                >
-                  <img src={xverse} alt="logo" className="pointer" width={45} />
                 </Link>
               </Col>
               <Col>

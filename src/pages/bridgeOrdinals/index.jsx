@@ -27,7 +27,6 @@ import {
   MAGICEDEN_WALLET_KEY,
   TokenContractAddress,
   UNISAT_WALLET_KEY,
-  XVERSE_WALLET_KEY,
   sliceAddress,
 } from "../../utils/common";
 import tokenAbiJson from "../../utils/tokens_abi.json";
@@ -367,8 +366,7 @@ const BridgeOrdinals = (props) => {
         )}
       </Row>
 
-      {walletState.active.includes(XVERSE_WALLET_KEY) ||
-      walletState.active.includes(UNISAT_WALLET_KEY) ||
+      {walletState.active.includes(UNISAT_WALLET_KEY) ||
       walletState.active.includes(MAGICEDEN_WALLET_KEY) ? (
         <Row
           justify={"space-between"}

@@ -1,11 +1,10 @@
-import axios from "axios";
-import unisat from "../assets/wallet-logo/unisat_logo.png";
-import meta from "../assets/wallet-logo/meta.png";
-import xverse from "../assets/wallet-logo/xverse_logo_whitebg.png";
-import magiceden from "../assets/brands/magiceden.svg"
 import { Actor, HttpAgent } from "@dfinity/agent";
-import Web3 from "web3";
+import axios from "axios";
 import { ethers } from "ethers";
+import Web3 from "web3";
+import magiceden from "../assets/brands/magiceden.svg";
+import meta from "../assets/wallet-logo/meta.png";
+import unisat from "../assets/wallet-logo/unisat_logo.png";
 
 export const API_METHODS = {
   get: axios.get,
@@ -22,7 +21,6 @@ export const apiUrl = {
   Ordiscan_api: process.env.REACT_APP_ORDISCAN_API
 };
 
-export const XVERSE_WALLET_KEY = "xverse";
 export const UNISAT_WALLET_KEY = "unisat";
 export const MAGICEDEN_WALLET_KEY = "magiceden";
 export const META_WALLET_KEY = "meta";
@@ -43,11 +41,6 @@ export const BTCWallets = [
     label: "MAGICEDEN",
     image: magiceden,
     key: MAGICEDEN_WALLET_KEY,
-  },
-  {
-    label: "XVERSE",
-    image: xverse,
-    key: XVERSE_WALLET_KEY,
   },
   {
     label: "UNISAT",

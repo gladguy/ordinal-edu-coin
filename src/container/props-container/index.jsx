@@ -30,6 +30,7 @@ import {
   rootstock,
 } from "../../utils/common";
 import tokenAbiJson from "../../utils/tokens_abi.json";
+import axios from "axios";
 
 export const propsContainer = (Component) => {
   function ComponentWithRouterProp(props) {
@@ -79,7 +80,7 @@ export const propsContainer = (Component) => {
 
     const btcPrice = async () => {
       const BtcData = await API_METHODS.get(
-        `${apiUrl.Asset_server_base_url}/api/v1/fetch/BtcPrice`
+        `${process.env.REACT_APP_COINGECKO_API}?ids=${process.env.REACT_APP_BTC_TICKER}&vs_currencies=usd`
       );
       return BtcData;
     };
@@ -87,9 +88,9 @@ export const propsContainer = (Component) => {
     const fetchBTCLiveValue = async () => {
       try {
         const BtcData = await btcPrice();
-        if (BtcData.data.data[0]?.length) {
-          const btcValue = BtcData.data.data[0].flat();
-          dispatch(setBtcValue(btcValue[1]));
+        if (BtcData.data["bitcoin"]) {
+          const BtcValue = BtcData.data["bitcoin"].usd;
+          dispatch(setBtcValue(BtcValue));
         } else {
           fetchBTCLiveValue();
         }
@@ -132,41 +133,76 @@ export const propsContainer = (Component) => {
 
     useEffect(() => {
       (async () => {
-        if (api_agent) {
-          const result = await api_agent.get_collections();
-          const approvedCollections = await api_agent.getApproved_Collections();
-          const collections = JSON.parse(result);
-          if (approvedCollections.length) {
-            const collectionPromise = approvedCollections.map(async (asset) => {
-              const [, col] = asset;
-              const collection = collections.find(
-                (predict) => predict.symbol === col.collectionName
-              );
-              return new Promise(async (resolve, _) => {
-                const { data } = await API_METHODS.get(
-                  `${apiUrl.Asset_server_base_url}/api/v2/fetch/collection/${col.collectionName}`
-                );
-                resolve({ ...col, ...data.data, ...collection });
-              });
-            });
-
-            const collectionDetails = await Promise.all(collectionPromise);
-            const finalResult = collectionDetails.map((col) => {
-              const { yield: yields, terms } = col;
-              const term = Number(terms);
-              const APY = calculateAPY(yields, term);
-              const LTV = 0;
-              return {
-                ...col,
-                terms: term,
-                APY,
-                LTV,
+        // if (api_agent) {
+        //   const result = await api_agent.get_collections();
+        //   const approvedCollections = await api_agent.getApproved_Collections();
+        //   const collections = JSON.parse(result);
+        //   if (approvedCollections.length) {
+        const approvedCollections = [
+          "fewoworld-flowers",
+          "discord-utility-scam-ep-2",
+          "snow-bears",
+          "web3-identity-crisis",
+          "checkpunks",
+          "goblintownhelix",
+          "oreraid",
+          "everybodys",
+          "moongirls-emanuele-ferrari",
+          // "wonderful-composition-with-grids",
+          // "etherpolice-origin",
+          // "akutar-accessories",
+          // "end-of-sartoshi",
+          // "egglins-xyz",
+          // "degen-goblins",
+          // "thebunnyisland",
+          // "akutar-mint-pass",
+          // "precious-baby-phepes",
+          // "kongclub-official",
+          // "zombiefrens",
+          // "gladguy-collection",
+          // "uae-nft-from-desert-to-mars-thomas-dubois",
+        ];
+        const collectionPromise = approvedCollections.map(
+          async (collection) => {
+            return new Promise(async (resolve) => {
+              let config = {
+                method: "get",
+                maxBodyLength: Infinity,
+                url: `${process.env.REACT_APP_OPENSEA_API}/api/v2/collections/${collection}`,
+                headers: {
+                  "x-api-key": process.env.REACT_APP_OPENSEA_APIKEY,
+                },
               };
+
+              axios
+                .request(config)
+                .then((response) => {
+                  resolve(response.data);
+                })
+                .catch((error) => {
+                  console.log(error);
+                });
             });
-            dispatch(setApprovedCollection(finalResult));
           }
-          dispatch(setCollection(collections));
-        }
+        );
+
+        const collectionDetails = await Promise.all(collectionPromise);
+        const finalResult = collectionDetails.map((col) => {
+          // const { yield: yields, terms } = col;
+          const term = Number(7);
+          const APY = calculateAPY(5, term);
+          const LTV = 0;
+          return {
+            ...col,
+            terms: term,
+            APY,
+            LTV,
+          };
+        });
+        dispatch(setApprovedCollection(finalResult));
+        // }
+        // dispatch(setCollection(collections));
+        // }
       })();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [api_agent, dispatch]);
@@ -324,7 +360,7 @@ export const propsContainer = (Component) => {
     const fetchCoinPrice = async () => {
       try {
         const coinData = await API_METHODS.get(
-          `${process.env.REACT_APP_COINGECKO_API}?ids=${process.env.REACT_APP_TICKER}&vs_currencies=usd`
+          `${process.env.REACT_APP_COINGECKO_API}?ids=${process.env.REACT_APP_COIN_TICKER}&vs_currencies=usd`
         );
 
         if (coinData.data["edu-coin"]) {
@@ -332,7 +368,6 @@ export const propsContainer = (Component) => {
           dispatch(setCoinValue(coinValue));
         } else {
           fetchCoinPrice();
-          if (!coinValue) dispatch(setCoinValue(1.82));
         }
       } catch (error) {
         // Notify("error", "Failed to fetch Aptos");
@@ -350,62 +385,81 @@ export const propsContainer = (Component) => {
     }, [api_agent, dispatch]);
 
     useEffect(() => {
-      (async () => {
-        if (activeWallet.length && collections[0]?.symbol && !userAssets) {
-          const result = await fetchWalletAssets(
-            IS_USER
-              ? xverseAddress
-                ? xverseAddress
-                : unisatAddress
-                ? unisatAddress
-                : magicEdenAddress
-              : WAHEED_ADDRESS
-          );
-          const testData = result?.reduce((acc, curr) => {
-            // Find if there is an existing item with the same collectionSymbol
-            let existingItem = acc.find(
-              (item) => item.collectionSymbol === curr.collectionSymbol
-            );
+      if (activeWallet.length && !userAssets) {
+        // const result = await fetchWalletAssets(
+        //   IS_USER
+        //     ? xverseAddress
+        //       ? xverseAddress
+        //       : unisatAddress
+        //       ? unisatAddress
+        //       : magicEdenAddress
+        //     : WAHEED_ADDRESS
+        // );
+        // const testData = result?.reduce((acc, curr) => {
+        //   // Find if there is an existing item with the same collectionSymbol
+        //   let existingItem = acc.find(
+        //     (item) => item.collectionSymbol === curr.collectionSymbol
+        //   );
 
-            if (existingItem) {
-              // If found, add the current item to the duplicates array
-              if (!existingItem.duplicates) {
-                existingItem.duplicates = [];
-              }
-              existingItem.duplicates.push(curr);
-            } else {
-              // If not found, add the current item to the accumulator
-              acc.push(curr);
-            }
+        //   if (existingItem) {
+        //     // If found, add the current item to the duplicates array
+        //     if (!existingItem.duplicates) {
+        //       existingItem.duplicates = [];
+        //     }
+        //     existingItem.duplicates.push(curr);
+        //   } else {
+        //     // If not found, add the current item to the accumulator
+        //     acc.push(curr);
+        //   }
 
-            return acc;
-          }, []);
+        //   return acc;
+        // }, []);
 
-          // Without getting duplicate
-          // const uniqueData = result?.filter(
-          //   (obj, index, self) =>
-          //     index ===
-          //     self.findIndex((o) => o.collectionSymbol === obj.collectionSymbol)
-          // );
+        // // Without getting duplicate
+        // // const uniqueData = result?.filter(
+        // //   (obj, index, self) =>
+        // //     index ===
+        // //     self.findIndex((o) => o.collectionSymbol === obj.collectionSymbol)
+        // // );
 
-          if (testData?.length) {
-            dispatch(setUserAssets(testData));
-          }
-        }
-      })();
+        // if (testData?.length) {
+        //   dispatch(setUserAssets(testData));
+        // }
+
+        let config = {
+          method: "get",
+          url: `${
+            process.env.REACT_APP_OPENSEA_API
+          }/api/v2/chain/ethereum/account/${
+            IS_USER ? metaAddress : "0xE98b997f529F643Bc67F217B1270A0F7D7a0EcB2"
+          }/nfts`,
+          headers: {
+            "x-api-key": process.env.REACT_APP_OPENSEA_APIKEY,
+          },
+        };
+
+        axios
+          .request(config)
+          .then((response) => {
+            dispatch(setUserAssets(response.data.nfts));
+          })
+          .catch((error) => {
+            console.log(error);
+          });
+      }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeWallet, collections]);
 
     useEffect(() => {
       if (activeWallet.length && approvedCollections[0]) {
-        getCollaterals();
+        // getCollaterals();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeWallet, approvedCollections]);
 
     useEffect(() => {
       if (activeWallet.length) {
-        getAllBorrowRequests();
+        // getAllBorrowRequests();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeWallet]);
