@@ -18,7 +18,7 @@ const OffersModal = ({
   const state = useSelector((state) => state);
   const offers = state.constant.offers;
   const metaAddress = state.wallet.meta.address;
-  const btcvalue = state.constant.btcvalue;
+  const ethvalue = state.constant.ethvalue;
   const coinValue = state.constant.coinValue;
 
   const ETH_ZERO = process.env.REACT_APP_ETH_ZERO;
@@ -50,7 +50,11 @@ const OffersModal = ({
           ? Number(offerModalData.floorPrice)
           : 30000;
 
-        floor = calculateOrdinalInCrypto(floor, btcvalue, coinValue).ordinalIncrypto;
+        floor = calculateOrdinalInCrypto(
+          floor,
+          ethvalue,
+          coinValue
+        ).ordinalIncrypto;
         const loanAmount = Number(obj.loanAmount) / ETH_ZERO;
         const LTV = ((loanAmount / floor) * 100).toFixed(2);
 
@@ -131,7 +135,7 @@ const OffersModal = ({
 
                       floor = calculateOrdinalInCrypto(
                         floor,
-                        btcvalue,
+                        ethvalue,
                         coinValue
                       ).ordinalIncrypto;
                       const loanAmount = Number(obj.loanAmount) / ETH_ZERO;

@@ -31,15 +31,16 @@ import {
 } from "../../utils/common";
 import tokenAbiJson from "../../utils/tokens_abi.json";
 
-const BridgeOrdinals = (props) => {
+const DBridge = (props) => {
   const { getCollaterals } = props.wallet;
   const { reduxState, isPlugError, dispatch } = props.redux;
   const activeWallet = reduxState.wallet.active;
 
   const walletState = reduxState.wallet;
-  const btcValue = reduxState.constant.btcvalue;
+  const btcValue = reduxState.constant.ethvalue;
   const coinValue = reduxState.constant.coinValue;
   const userCollateral = reduxState.constant.userCollateral;
+
   const xverseAddress = walletState.xverse.ordinals.address;
   const unisatAddress = walletState.unisat.address;
   const magicEdenAddress = walletState.magicEden.ordinals.address;
@@ -301,7 +302,7 @@ const BridgeOrdinals = (props) => {
       <Row justify={"space-between"} align={"middle"}>
         <Col>
           <h1 className="font-xlarge text-color-four letter-spacing-medium-one">
-            Bridge Ordinals
+            DBridge
           </h1>
         </Col>
       </Row>
@@ -666,4 +667,4 @@ const BridgeOrdinals = (props) => {
   );
 };
 
-export default propsContainer(BridgeOrdinals);
+export default propsContainer(DBridge);

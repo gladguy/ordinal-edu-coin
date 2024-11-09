@@ -48,7 +48,7 @@ const Borrowing = (props) => {
 
   const metaAddress = reduxState.wallet.meta.address;
 
-  const btcvalue = reduxState.constant.btcvalue;
+  const ethvalue = reduxState.constant.ethvalue;
   const coinValue = reduxState.constant.coinValue;
 
   const CONTENT_API = process.env.REACT_APP_ORDINALS_CONTENT_API;
@@ -123,9 +123,9 @@ const Borrowing = (props) => {
                 width={"75px"}
                 height={"75px"}
                 alt={"collection_images"}
-                src={obj?.imageURI}
+                src={obj?.image_url}
                 onError={(e) =>
-                  (e.target.src = `${process.env.PUBLIC_URL}/collections/${obj?.symbol}.png`)
+                  (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
                 }
               />
             </Col>
@@ -213,7 +213,7 @@ const Borrowing = (props) => {
       render: (_, obj) => {
         const data = calculateOrdinalInCrypto(
           Number(obj.floorPrice) ? Number(obj.floorPrice) : 30000,
-          btcvalue,
+          ethvalue,
           coinValue
         );
         return (
@@ -251,7 +251,7 @@ const Borrowing = (props) => {
                 : 30000;
               const floorPrice = calculateOrdinalInCrypto(
                 floor,
-                btcvalue,
+                ethvalue,
                 coinValue
               ).ordinalIncrypto;
 

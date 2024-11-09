@@ -1,22 +1,22 @@
 import { Actor, HttpAgent } from "@dfinity/agent";
+import axios from "axios";
 import { ethers } from "ethers";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Notify from "../../component/notification";
+import { rootstockApiFactory } from "../../opencampus_canister";
 import { apiFactory } from "../../ordinal_canister";
 import {
   setAgent,
   setAllBorrowRequest,
   setApprovedCollection,
-  setCoinValue,
   setBorrowCollateral,
-  setBtcValue,
-  setCollection,
+  setCoinValue,
+  setEthValue,
   setUserAssets,
   setUserCollateral,
 } from "../../redux/slice/constant";
-import { rootstockApiFactory } from "../../opencampus_canister";
 import borrowJson from "../../utils/borrow_abi.json";
 import {
   API_METHODS,
@@ -30,7 +30,6 @@ import {
   rootstock,
 } from "../../utils/common";
 import tokenAbiJson from "../../utils/tokens_abi.json";
-import axios from "axios";
 
 export const propsContainer = (Component) => {
   function ComponentWithRouterProp(props) {
@@ -79,20 +78,20 @@ export const propsContainer = (Component) => {
     const WAHEED_ADDRESS = process.env.REACT_APP_WAHEED_ADDRESS;
 
     const btcPrice = async () => {
-      const BtcData = await API_METHODS.get(
+      const ethData = await API_METHODS.get(
         `${process.env.REACT_APP_COINGECKO_API}?ids=${process.env.REACT_APP_BTC_TICKER}&vs_currencies=usd`
       );
-      return BtcData;
+      return ethData;
     };
 
-    const fetchBTCLiveValue = async () => {
+    const fetchETHLiveValue = async () => {
       try {
-        const BtcData = await btcPrice();
-        if (BtcData.data["bitcoin"]) {
-          const BtcValue = BtcData.data["bitcoin"].usd;
-          dispatch(setBtcValue(BtcValue));
+        const ethData = await btcPrice();
+        if (ethData.data["ethereum"]) {
+          const EthValue = ethData.data["ethereum"].usd;
+          dispatch(setEthValue(EthValue));
         } else {
-          fetchBTCLiveValue();
+          fetchETHLiveValue();
         }
       } catch (error) {
         // Notify("error", "Failed to fetch ckBtc");
@@ -124,7 +123,7 @@ export const propsContainer = (Component) => {
     useEffect(() => {
       (() => {
         setInterval(async () => {
-          if (ckBtcAgent) fetchBTCLiveValue();
+          if (ckBtcAgent) fetchETHLiveValue();
         }, [300000]);
         return () => clearInterval();
       })();
@@ -466,7 +465,7 @@ export const propsContainer = (Component) => {
 
     useEffect(() => {
       //Fetching BTC Value
-      fetchBTCLiveValue();
+      fetchETHLiveValue();
 
       fetchCoinPrice();
       // eslint-disable-next-line react-hooks/exhaustive-deps

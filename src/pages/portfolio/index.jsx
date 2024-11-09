@@ -1,4 +1,5 @@
 import {
+  Checkbox,
   Col,
   Divider,
   Dropdown,
@@ -12,7 +13,7 @@ import { ethers } from "ethers";
 import React, { useEffect, useState } from "react";
 import { BiSolidSpreadsheet } from "react-icons/bi";
 import { FaHandHolding, FaMoneyBillAlt } from "react-icons/fa";
-import { FcApproval } from "react-icons/fc";
+import { FcApproval, FcOk } from "react-icons/fc";
 import { FiArrowDownLeft } from "react-icons/fi";
 import { HiMiniReceiptPercent } from "react-icons/hi2";
 import { IoInformationCircleSharp, IoWarningSharp } from "react-icons/io5";
@@ -27,13 +28,17 @@ import TableComponent from "../../component/table";
 import { propsContainer } from "../../container/props-container";
 import { setLoading } from "../../redux/slice/constant";
 import borrowJson from "../../utils/borrow_abi.json";
+import tokenJson from "../../utils/tokens_abi.json";
 import {
   BorrowContractAddress,
   Capitalaize,
   DateTimeConverter,
   sliceAddress,
+  TokenContractAddress,
 } from "../../utils/common";
 import axios from "axios";
+import { TbSend } from "react-icons/tb";
+import { Link } from "react-router-dom";
 
 const Portfolio = (props) => {
   const { reduxState, dispatch } = props.redux;
@@ -42,7 +47,7 @@ const Portfolio = (props) => {
   const dashboardData = reduxState.constant.dashboardData;
   const userAssets = reduxState.constant.userAssets || [];
 
-  const btcValue = reduxState.constant.btcvalue;
+  const btcValue = reduxState.constant.ethvalue;
   const coinValue = reduxState.constant.coinValue;
   const metaAddress = walletState.meta.address;
 
@@ -52,13 +57,13 @@ const Portfolio = (props) => {
 
   const { Text } = Typography;
   const [copy, setCopy] = useState("Copy");
+  const [agreeCheckbox, setAgreeCheckbox] = useState(false);
   const [assets, setAssets] = useState([]);
-  // console.log(assets);
 
   const [downloadWalletModal, setDownloadWalletModal] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [handleSupplyModal, setHandleSupplyModal] = useState(false);
-  const [supplyModalItems, setSupplyModalItems] = useState(null);
+  const [supplyModalItems, setSupplyModalItems] = useState({});
 
   const [userLendings, setUserLendings] = useState(null);
   const [userRequests, setUserRequests] = useState(null);
@@ -181,7 +186,7 @@ const Portfolio = (props) => {
         return (
           <>
             {obj?.price?.floor_price ? (
-              <Flex vertical align="center">
+              <Flex vertical gap={5} align="center">
                 <Flex
                   align="center"
                   className="text-color-one font-xsmall letter-spacing-small"
@@ -230,7 +235,10 @@ const Portfolio = (props) => {
             <Dropdown.Button
               className="dbButtons-grey font-weight-600 letter-spacing-small"
               trigger={"click"}
-              onClick={() => setHandleSupplyModal(true)}
+              onClick={() => {
+                setHandleSupplyModal(true);
+                setSupplyModalItems(obj);
+              }}
               menu={{
                 items: options,
                 onClick: () => setSupplyModalItems(obj),
@@ -243,6 +251,7 @@ const Portfolio = (props) => {
       },
     },
   ];
+  console.log(supplyModalItems);
 
   const loanColumns = [
     {
@@ -441,6 +450,37 @@ const Portfolio = (props) => {
     }
   };
 
+  const handleTransferToken = async () => {
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const nftContract = new ethers.Contract( //Created with (Nft) token's contract
+        supplyModalItems.contract,
+        tokenJson,
+        signer
+      );
+      console.log(
+        "Token contract",
+        TokenContractAddress,
+        supplyModalItems.identifier
+      );
+
+      const approveRequest = await nftContract.approve(
+        TokenContractAddress, //TO
+        supplyModalItems.identifier //tokenId
+      );
+
+      const transferRequest = await nftContract.transferFrom(
+        supplyModalItems.contract, //FROM
+        TokenContractAddress, //TO
+        supplyModalItems.identifier //tokenId
+      );
+      Notify("success", "Supply successfull");
+    } catch (error) {
+      console.log("Transfer error", error);
+    }
+  };
+
   useEffect(() => {
     if (activeWallet.length) {
       (async () => {
@@ -475,6 +515,7 @@ const Portfolio = (props) => {
       fetchFloorPrice();
     }
   }, []);
+  console.log(assets);
 
   return (
     <>
@@ -609,12 +650,12 @@ const Portfolio = (props) => {
                   <Col xs={24}>
                     <TableComponent
                       loading={{
-                        spinning: userAssets === null,
+                        spinning: assets === null,
                         indicator: <Bars />,
                       }}
                       pagination={{ pageSize: 5 }}
                       rowKey={(e) =>
-                        `${e?.id}-${e?.inscriptionNumber}-${Math.random()}`
+                        `${e?.identifier}-${e?.contract}-${Math.random()}`
                       }
                       tableColumns={AssetsToSupplyTableColumns}
                       tableData={assets}
@@ -913,21 +954,21 @@ const Portfolio = (props) => {
                 <Text className="text-color-two font-small">Floor Price</Text>
 
                 <Text className="text-color-one font-small font-weight-600">
-                  {supplyModalItems?.collection.floorPrice / BTC_ZERO}
+                  {supplyModalItems?.collection?.floorPrice / BTC_ZERO}
                 </Text>
               </Flex>
               <Flex vertical className="borrowDataStyle">
                 <Text className="text-color-two font-small">Total Listed</Text>
 
                 <Text className="text-color-one font-small font-weight-600">
-                  {supplyModalItems?.collection.totalListed}
+                  {supplyModalItems?.collection?.totalListed}
                 </Text>
               </Flex>
               <Flex vertical className="borrowDataStyle">
                 <Text className="text-color-two font-small">Total Volume</Text>
 
                 <Text className="text-color-one font-small font-weight-600">
-                  {supplyModalItems?.collection.totalVolume}
+                  {supplyModalItems?.collection?.totalVolume}
                 </Text>
               </Flex>
             </Row>
@@ -938,7 +979,7 @@ const Portfolio = (props) => {
 
                 <Row justify={"center"}>
                   <Text className="text-color-one font-small font-weight-600">
-                    {supplyModalItems?.collection.owners}
+                    {supplyModalItems?.collection?.owners}
                   </Text>
                 </Row>
               </Flex>
@@ -948,7 +989,7 @@ const Portfolio = (props) => {
                 </Text>
                 <Row justify={"center"}>
                   <Text className="text-color-one font-small font-weight-600">
-                    {supplyModalItems?.collection.pendingTransactions}
+                    {supplyModalItems?.collection?.pendingTransactions}
                   </Text>
                 </Row>
               </Flex>
@@ -956,7 +997,7 @@ const Portfolio = (props) => {
                 <Text className="text-color-two font-small">Supply</Text>
                 <Row justify={"center"}>
                   <Text className="text-color-one font-small font-weight-600">
-                    {supplyModalItems?.collection.supply}
+                    {supplyModalItems?.collection?.supply}
                   </Text>
                 </Row>
               </Flex>
@@ -967,63 +1008,93 @@ const Portfolio = (props) => {
 
       {/* Custody supply address display */}
       <ModalDisplay
-        width={"25%"}
+        width={"30%"}
         open={handleSupplyModal}
         onCancel={handleCancel}
         onOk={handleOk}
         footer={null}
       >
         <Row justify={"center"}>
-          <IoWarningSharp size={50} color="#f46d6d" />
+          <FcOk size={50} />
         </Row>
         <Row justify={"center"}>
           <Text className="text-color-one font-xlarge font-weight-600 m-25">
-            Reserved Address
+            Bridge Token
           </Text>
         </Row>
-        <Row>
-          <span className="text-color-two mt-15">
-            This is the token reserved contract address, please do not transfer
-            directly through the CEX, you will not be able to confirm the source
-            of funds, and you will not be responsible for lost funds.
-          </span>
+
+        <Row className="mt-15" justify={"space-between"}>
+          <Col xs={11}>
+            <Flex gap={5} vertical align="center">
+              <img
+                src={supplyModalItems?.display_image_url}
+                alt={`${supplyModalItems.identifier}-borrow_image`}
+                className="border-radius-30"
+                width={70}
+                height={70}
+              />
+              <span className="text-color-two">{supplyModalItems.name}</span>
+            </Flex>
+          </Col>
+
+          <Col xs={11}>
+            <Flex vertical className="borrowDataStyle">
+              <Text className="text-color-two font-small">Floor</Text>
+
+              <Text className="text-color-one font-xsmall font-weight-600">
+                {supplyModalItems?.price?.floor_price}
+              </Text>
+            </Flex>
+
+            <Flex vertical className="borrowDataStyle">
+              <Text className="text-color-two font-small">Total Volume</Text>
+
+              <Text className="text-color-one font-xsmall font-weight-600">
+                {supplyModalItems?.price?.volume}
+              </Text>
+            </Flex>
+          </Col>
         </Row>
-        <Row
-          justify={"space-around"}
-          align={"middle"}
-          className="mt-30  border "
-        >
+
+        <Row justify={"start"}>
+          <span className="text-color-two font-medium">Contract</span>
+        </Row>
+
+        <Row justify={"space-around"} align={"middle"} className="border">
           <Col md={18}>
-            <span className="text-color-two">
-              bc1pjj4uzw3svyhezxqq7cvqdxzf48kfhklxuahyx8v8u69uqfmt0udqlhwhwz
-            </span>
+            <span className="text-color-two">{supplyModalItems.contract}</span>
           </Col>
           <Col md={3}>
             <Row justify={"end"}>
-              <Tooltip arrow title={copy} trigger={"hover"} placement="top">
-                <MdContentCopy
-                  className="pointer"
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      "bc1pjj4uzw3svyhezxqq7cvqdxzf48kfhklxuahyx8v8u69uqfmt0udqlhwhwz"
-                    );
-                    setCopy("Copied");
-                    setTimeout(() => {
-                      setCopy("Copy");
-                    }, 2000);
-                  }}
-                  size={20}
-                  color="#764ba2"
-                />
-              </Tooltip>
+              <Link to={supplyModalItems.opensea_url}>
+                <TbSend className="pointer" size={20} color="#764ba2" />
+              </Link>
             </Row>
           </Col>
         </Row>
+
+        <Row>
+          <span className="text-color-two mt-15 pointer" id="agree">
+            <Checkbox
+              for="agree"
+              value={agreeCheckbox}
+              onChange={(e) => setAgreeCheckbox(e.target.checked)}
+            />{" "}
+            I agree to transfer the NFT to EDUbridge as collateral for a loan.
+          </span>
+        </Row>
+
         <Row>
           <CustomButton
             block
-            onClick={handleCancel}
-            title="I Know"
+            onClick={() => {
+              if (agreeCheckbox) {
+                handleTransferToken();
+              } else {
+                Notify("info", "Agree terms and conditions!");
+              }
+            }}
+            title="Supply"
             className="click-btn font-weight-600 letter-spacing-small m-25"
           />
         </Row>

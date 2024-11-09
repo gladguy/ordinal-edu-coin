@@ -759,7 +759,7 @@ const Nav = (props) => {
                   }}
                   ref={ref3}
                 >
-                  Bridge Ordinals
+                  DBridge
                 </Text>
                 <Text className="font-xsmall color-grey">|</Text>
                 <Text
@@ -1154,7 +1154,7 @@ const Nav = (props) => {
                 <img
                   src={ordinals_O_logo}
                   alt="bitcoin"
-                  style={{ marginRight: "40px", borderRadius: "50%" }}
+                  style={{ marginRight: "20px", borderRadius: "50%" }}
                   width={25}
                 />
                 <Flex vertical>
@@ -1260,7 +1260,7 @@ const Nav = (props) => {
                 <Row style={{ padding: " 0px 24px", marginTop: "10px" }}>
                   <Col>
                     <Loading
-                      spin={!constantState.btcvalue}
+                      spin={!constantState.ethvalue}
                       indicator={
                         <TailSpin
                           stroke="#6a85f1"
@@ -1268,7 +1268,7 @@ const Nav = (props) => {
                         />
                       }
                     >
-                      {constantState.btcvalue ? (
+                      {constantState.ethvalue ? (
                         <Flex gap={5}>
                           <Text className="gradient-text-one font-small heading-one">
                             BTC
@@ -1280,7 +1280,7 @@ const Nav = (props) => {
                             width="35dvw"
                           />{" "}
                           <Text className="gradient-text-one font-small heading-one">
-                            $ {constantState.btcvalue}
+                            $ {constantState.ethvalue}
                           </Text>
                         </Flex>
                       ) : (

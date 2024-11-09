@@ -12,7 +12,7 @@ const Home = (props) => {
   const { reduxState } = props.redux;
   const collections = reduxState.constant.approvedCollections;
   const coinValue = reduxState.constant.coinValue;
-  const btcvalue = reduxState.constant.btcvalue;
+  const ethvalue = reduxState.constant.ethvalue;
 
   const { Text } = Typography;
   const { useBreakpoint } = Grid;
@@ -88,7 +88,7 @@ const Home = (props) => {
       fetchCollections();
     }
   }, []);
-  console.log("col", collectionList);
+  // console.log("col", collectionList);
 
   return (
     <React.Fragment>
@@ -203,10 +203,7 @@ const Home = (props) => {
                               className="font-medium text-color-two"
                             >
                               <img src={bitcoin} alt="noimage" width={20} />
-                              {(
-                                ((floor / BTC_ZERO) * btcvalue) /
-                                coinValue
-                              ).toFixed(4)}
+                              {((floor * ethvalue) / coinValue).toFixed(2)}
                             </Flex>
                           </div>
 
@@ -228,8 +225,7 @@ const Home = (props) => {
                                 height={22}
                               />
                               {(
-                                ((collection?.price.volume / BTC_ZERO) *
-                                  btcvalue) /
+                                (collection?.price.volume * ethvalue) /
                                 coinValue
                               ).toFixed(2)}
                             </Flex>

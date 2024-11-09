@@ -2,7 +2,7 @@ import { Col, Flex, Grid, Row, Typography } from "antd";
 import gsap from "gsap";
 import React from "react";
 import TailSpin from "react-loading-icons/dist/esm/components/tail-spin";
-import Bitcoin from "../../assets/coin_logo/Bitcoin.png";
+import Ethereum from "../../assets/coin_logo/ethereum.png";
 import Loading from "../../component/loading-wrapper/secondary-loader";
 import logo from "../../assets/coin_logo/edu_coin.png";
 
@@ -33,16 +33,16 @@ const Footer = (props) => {
       <Row justify={"space-around"} align={"middle"}>
         <Col>
           <Loading
-            spin={!constantState.btcvalue}
+            spin={!constantState.ethvalue}
             indicator={
               <TailSpin stroke="#6a85f1" alignmentBaseline="central" />
             }
           >
-            {constantState.btcvalue ? (
+            {constantState.ethvalue ? (
               <Flex gap={5} align="center">
                 <img
                   className="round"
-                  src={Bitcoin}
+                  src={Ethereum}
                   alt="noimage"
                   style={{ justifyContent: "center" }}
                   width={"25px"}
@@ -53,7 +53,7 @@ const Footer = (props) => {
                     breakpoints.xs ? "font-xmsmall" : "font-small"
                   } heading-one`}
                 >
-                  {USDollar.format(constantState.btcvalue)}
+                  {USDollar.format(constantState.ethvalue)}
                 </Text>
               </Flex>
             ) : (
