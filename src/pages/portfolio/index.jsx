@@ -16,9 +16,11 @@ import { FaHandHolding, FaMoneyBillAlt } from "react-icons/fa";
 import { FcApproval, FcOk } from "react-icons/fc";
 import { FiArrowDownLeft } from "react-icons/fi";
 import { HiMiniReceiptPercent } from "react-icons/hi2";
-import { IoInformationCircleSharp, IoWarningSharp } from "react-icons/io5";
+import { IoInformationCircleSharp } from "react-icons/io5";
 import { MdContentCopy, MdDeleteForever, MdTour } from "react-icons/md";
+import { TbSend } from "react-icons/tb";
 import { Bars } from "react-loading-icons";
+import { Link } from "react-router-dom";
 import Bitcoin from "../../assets/coin_logo/edu_coin.png";
 import CustomButton from "../../component/Button";
 import WalletUI from "../../component/download-wallets-UI";
@@ -28,17 +30,16 @@ import TableComponent from "../../component/table";
 import { propsContainer } from "../../container/props-container";
 import { setLoading } from "../../redux/slice/constant";
 import borrowJson from "../../utils/borrow_abi.json";
-import tokenJson from "../../utils/tokens_abi.json";
 import {
   BorrowContractAddress,
   Capitalaize,
+  custodyAddress,
   DateTimeConverter,
   sliceAddress,
   TokenContractAddress,
 } from "../../utils/common";
-import axios from "axios";
-import { TbSend } from "react-icons/tb";
-import { Link } from "react-router-dom";
+import tokenJson from "../../utils/tokens_abi.json";
+import Web3 from "web3";
 
 const Portfolio = (props) => {
   const { reduxState, dispatch } = props.redux;
@@ -46,24 +47,23 @@ const Portfolio = (props) => {
   const walletState = reduxState.wallet;
   const dashboardData = reduxState.constant.dashboardData;
   const userAssets = reduxState.constant.userAssets || [];
+  const collectionObj = reduxState.constant.approvedCollectionsObj || {};
 
   const btcValue = reduxState.constant.ethvalue;
   const coinValue = reduxState.constant.coinValue;
   const metaAddress = walletState.meta.address;
 
-  const CONTENT_API = process.env.REACT_APP_ORDINALS_CONTENT_API;
-  const BTC_ZERO = process.env.REACT_APP_BTC_ZERO;
   const ETH_ZERO = process.env.REACT_APP_ETH_ZERO;
 
   const { Text } = Typography;
   const [copy, setCopy] = useState("Copy");
   const [agreeCheckbox, setAgreeCheckbox] = useState(false);
-  const [assets, setAssets] = useState([]);
 
   const [downloadWalletModal, setDownloadWalletModal] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [handleSupplyModal, setHandleSupplyModal] = useState(false);
   const [supplyModalItems, setSupplyModalItems] = useState({});
+  const [isSupplyModalLoading, setIsSupplyModalLoading] = useState(false);
 
   const [userLendings, setUserLendings] = useState(null);
   const [userRequests, setUserRequests] = useState(null);
@@ -150,7 +150,9 @@ const Portfolio = (props) => {
 
   const handleCancel = () => {
     setIsModalOpen(false);
+    setAgreeCheckbox(false);
     setHandleSupplyModal(false);
+    setIsSupplyModalLoading(false);
   };
 
   const AssetsToSupplyTableColumns = [
@@ -163,13 +165,18 @@ const Portfolio = (props) => {
         <>
           <Flex gap={5} vertical align="center">
             <img
-              src={obj.display_image_url}
+              src={obj.image}
               alt={`${obj.id}-borrow_image`}
               className="border-radius-30"
+              onError={(e) =>
+                (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
+              }
               width={70}
               height={70}
             />
-            {obj.name}
+            <Text className="text-color-one font-xsmall letter-spacing-small">
+              {obj.name}
+            </Text>
           </Flex>
         </>
       ),
@@ -180,14 +187,15 @@ const Portfolio = (props) => {
       align: "center",
       dataIndex: "value",
       render: (_, obj) => {
-        const floor = Number(obj?.price?.floor_price)
-          ? Number(obj?.price?.floor_price)
-          : 30000;
+        const floor = Number(obj?.collection?.floorAskPrice?.amount?.decimal)
+          ? Number(obj?.collection?.floorAskPrice?.amount?.decimal)
+          : 0;
         return (
           <>
-            {obj?.price?.floor_price ? (
-              <Flex vertical gap={5} align="center">
+            {floor ? (
+              <Flex vertical gap={3} align="center">
                 <Flex
+                  gap={5}
                   align="center"
                   className="text-color-one font-xsmall letter-spacing-small"
                 >
@@ -199,7 +207,9 @@ const Portfolio = (props) => {
                 </span>
               </Flex>
             ) : (
-              "-"
+              <span className="text-color-two font-medium letter-spacing-small">
+                -
+              </span>
             )}
           </>
         );
@@ -230,6 +240,13 @@ const Portfolio = (props) => {
       title: " ",
       align: "center",
       render: (_, obj) => {
+        const objs = {
+          ...obj,
+          collection: {
+            ...obj.collection,
+            ...collectionObj[obj.collection.slug],
+          },
+        };
         return (
           <Flex gap={5}>
             <Dropdown.Button
@@ -237,11 +254,11 @@ const Portfolio = (props) => {
               trigger={"click"}
               onClick={() => {
                 setHandleSupplyModal(true);
-                setSupplyModalItems(obj);
+                setSupplyModalItems(objs);
               }}
               menu={{
                 items: options,
-                onClick: () => setSupplyModalItems(obj),
+                onClick: () => setSupplyModalItems(objs),
               }}
             >
               Supply
@@ -449,9 +466,90 @@ const Portfolio = (props) => {
       console.log("repay error", error);
     }
   };
+  console.log("supplyModalItems", supplyModalItems);
+
+  async function switchToOpenCampusNetwork() {
+    try {
+      if (window.ethereum) {
+        const chainId = "0xA0F84"; // 656476 in hexadecimal
+
+        // Request MetaMask to add the OpenCampus network
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: chainId,
+              chainName: "OpenCampus Network",
+              rpcUrls: ["https://open-campus-codex-sepolia.drpc.org"],
+              nativeCurrency: {
+                name: "edu",
+                symbol: "edu",
+                decimals: 18,
+              },
+              blockExplorerUrls: ["https://explorer.opencampus.org"], // Replace with actual explorer URL if available
+            },
+          ],
+        });
+
+        // After adding the network, request account access
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+
+        console.log("Switched to OpenCampus Network!");
+      } else {
+        console.error("MetaMask is not installed!");
+      }
+    } catch (error) {
+      console.error("Failed to switch network", error);
+    }
+  }
+
+  async function switchToPolygonNetwork() {
+    try {
+      // Check if MetaMask is installed
+      if (window.ethereum) {
+        const chainId = "0x89"; // Polygon Mainnet Chain ID (137 in hex)
+
+        // Request to switch to Polygon network
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: chainId,
+              chainName: "Polygon Mainnet",
+              rpcUrls: ["https://polygon-rpc.com/"],
+              nativeCurrency: {
+                name: "MATIC",
+                symbol: "MATIC",
+                decimals: 18,
+              },
+              blockExplorerUrls: ["https://polygonscan.com/"],
+            },
+          ],
+        });
+
+        // After adding the network, request account access
+        // await window.ethereum.request({ method: "eth_requestAccounts" });
+
+        Notify("success", "Switched to Polygon Network!");
+      } else {
+        Notify("error", "MetaMask is not installed!");
+      }
+    } catch (error) {
+      console.error("Failed to switch network", error);
+    }
+  }
 
   const handleTransferToken = async () => {
     try {
+      setIsSupplyModalLoading(true);
+      const web3 = new Web3(window.ethereum);
+      const networkId = await web3.eth.net.getId();
+      console.log("networkId", networkId);
+
+      if (Number(networkId) !== 137) {
+        switchToPolygonNetwork();
+        return;
+      }
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const nftContract = new ethers.Contract( //Created with (Nft) token's contract
@@ -461,22 +559,29 @@ const Portfolio = (props) => {
       );
       console.log(
         "Token contract",
-        TokenContractAddress,
-        supplyModalItems.identifier
+        supplyModalItems.contract,
+        supplyModalItems.tokenId
       );
 
+      // eth call
       const approveRequest = await nftContract.approve(
-        TokenContractAddress, //TO
-        supplyModalItems.identifier //tokenId
+        custodyAddress, //TO
+        supplyModalItems.tokenId //tokenId
       );
 
+      console.log("approveRequest", approveRequest);
+
+      // eth call
       const transferRequest = await nftContract.transferFrom(
-        supplyModalItems.contract, //FROM
-        TokenContractAddress, //TO
-        supplyModalItems.identifier //tokenId
+        metaAddress, //FROM
+        custodyAddress, //TO (custody eth address)
+        supplyModalItems.tokenId //tokenId
       );
+      console.log("transferRequest", transferRequest);
       Notify("success", "Supply successfull");
+      setIsSupplyModalLoading(false);
     } catch (error) {
+      setIsSupplyModalLoading(false);
       console.log("Transfer error", error);
     }
   };
@@ -484,38 +589,38 @@ const Portfolio = (props) => {
   useEffect(() => {
     if (activeWallet.length) {
       (async () => {
-        // fetchLendingRequests();
-        // fetchBorrowingRequests();
-        // fetchUserRequests();
+        fetchLendingRequests();
+        fetchBorrowingRequests();
+        fetchUserRequests();
       })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWallet]);
 
-  const fetchFloorPrice = async () => {
-    const price = userAssets.map((collection) => {
-      return new Promise(async (res) => {
-        const result = await axios.get(
-          `${process.env.REACT_APP_OPENSEA_API}/api/v2/collections/${collection.collection}/stats`,
-          {
-            headers: {
-              "x-api-key": process.env.REACT_APP_OPENSEA_APIKEY,
-            },
-          }
-        );
-        res({ ...collection, price: result.data.total });
-      });
-    });
-    const revealedPromise = await Promise.all(price);
-    setAssets(revealedPromise);
-  };
+  // const fetchFloorPrice = async () => {
+  //   const price = userAssets.map((collection) => {
+  //     return new Promise(async (res) => {
+  //       const result = await axios.get(
+  //         `${process.env.REACT_APP_OPENSEA_API}/api/v2/collections/${collection.collection}/stats`,
+  //         {
+  //           headers: {
+  //             "x-api-key": process.env.REACT_APP_OPENSEA_APIKEY,
+  //           },
+  //         }
+  //       );
+  //       res({ ...collection, price: result.data.total });
+  //     });
+  //   });
+  //   const revealedPromise = await Promise.all(price);
+  //   setAssets(revealedPromise);
+  // };
 
-  useEffect(() => {
-    if (userAssets[0]) {
-      fetchFloorPrice();
-    }
-  }, []);
-  console.log(assets);
+  // useEffect(() => {
+  //   if (userAssets[0]) {
+  //     fetchFloorPrice();
+  //   }
+  // }, []);
+  console.log(userAssets);
 
   return (
     <>
@@ -644,21 +749,19 @@ const Portfolio = (props) => {
           {!activeWallet.length ? (
             <Text className="text-color-one font-medium">Connect wallet!</Text>
           ) : radioBtn === "Assets" ? (
-            <Row className="mt-40 pad-bottom-30" gutter={32}>
+            <Row className="mt-20 pad-bottom-30" gutter={32}>
               <Col xs={24}>
                 <Row className="m-bottom">
                   <Col xs={24}>
                     <TableComponent
                       loading={{
-                        spinning: assets === null,
+                        spinning: userAssets === null,
                         indicator: <Bars />,
                       }}
                       pagination={{ pageSize: 5 }}
-                      rowKey={(e) =>
-                        `${e?.identifier}-${e?.contract}-${Math.random()}`
-                      }
+                      rowKey={(e) => `${e?.id}-${e?.contract}-${Math.random()}`}
                       tableColumns={AssetsToSupplyTableColumns}
-                      tableData={assets}
+                      tableData={userAssets}
                     />
                   </Col>
                 </Row>
@@ -808,7 +911,7 @@ const Portfolio = (props) => {
         width={"50%"}
         title={
           <Row className="white-color font-large letter-spacing-small">
-            Details
+            Token Details
           </Row>
         }
         footer={null}
@@ -816,98 +919,42 @@ const Portfolio = (props) => {
         onOk={handleOk}
         onCancel={handleCancel}
       >
-        <Row className="mt-30">
-          <Col md={6}>
+        <Row className="mt-30" justify={"space-between"}>
+          <Col md={3}>
             <Text className="gradient-text-one font-small font-weight-600">
-              Asset Info
+              Token Info
             </Text>
           </Col>
-          <Col md={18}>
+          <Col md={20}>
             <Row>
-              <Col md={12}>
+              <Col md={10}>
                 {supplyModalItems && (
                   <>
                     <Flex gap={5} vertical align="center">
-                      {supplyModalItems.contentType === "image/webp" ||
-                      supplyModalItems.contentType === "image/jpeg" ||
-                      supplyModalItems.contentType === "image/png" ? (
-                        <img
-                          src={`${CONTENT_API}/content/${supplyModalItems.id}`}
-                          alt={`${supplyModalItems.id}-borrow_image`}
-                          className="border-radius-30"
-                          width={70}
-                          height={70}
-                        />
-                      ) : supplyModalItems.contentType === "image/svg" ||
-                        supplyModalItems.contentType ===
-                          "text/html;charset=utf-8" ||
-                        supplyModalItems.contentType === "text/html" ||
-                        supplyModalItems.contentType === "image/svg+xml" ? (
-                        <iframe
-                          loading="lazy"
-                          width={"80px"}
-                          height={"80px"}
-                          style={{ border: "none", borderRadius: "20%" }}
-                          src={`${CONTENT_API}/content/${supplyModalItems.id}`}
-                          title="svg"
-                          sandbox="allow-scripts"
-                        >
-                          <svg
-                            viewBox="0 0 100 100"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <image
-                              href={`${CONTENT_API}/content/${supplyModalItems.id}`}
-                            />
-                          </svg>
-                        </iframe>
-                      ) : (
-                        <img
-                          src={`${
-                            supplyModalItems?.meta?.collection_page_img_url
-                              ? supplyModalItems?.meta?.collection_page_img_url
-                              : `${process.env.PUBLIC_URL}/collections/${supplyModalItems?.collectionSymbol}`
-                          }`}
-                          // NatBoys
-                          // src={`https://ipfs.io/ipfs/QmdQboXbkTdwEa2xPkzLsCmXmgzzQg3WCxWFEnSvbnqKJr/1842.png`}
-                          // src={`${process.env.PUBLIC_URL}/collections/${supplyModalItems?.collectionSymbol}.png`}
-                          onError={(e) =>
-                            (e.target.src = `${process.env.PUBLIC_URL}/collections/${supplyModalItems?.collectionSymbol}.png`)
-                          }
-                          alt={`${supplyModalItems.id}-borrow_image`}
-                          className="border-radius-30"
-                          width={70}
-                          height={70}
-                        />
-                      )}
-                      {Capitalaize(supplyModalItems.collectionSymbol)} - #
-                      {supplyModalItems.inscriptionNumber}
+                      <img
+                        src={supplyModalItems.image}
+                        alt={`${supplyModalItems.id}-borrow_image`}
+                        onError={(e) =>
+                          (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
+                        }
+                        className="border-radius-30"
+                        width={100}
+                        height={100}
+                      />
+                      {/* <Text className="text-color-one font-xsmall font-weight-600">
+                        {Capitalaize(supplyModalItems.name)}
+                      </Text> */}
                     </Flex>
                   </>
                 )}
               </Col>
 
-              <Col md={12}>
+              <Col md={13}>
                 <Row>
-                  {" "}
                   <Flex vertical>
-                    <Text className="text-color-two font-small">
-                      Inscription Number
-                    </Text>
-                    <Text className="text-color-one font-small font-weight-600">
-                      #{supplyModalItems?.inscriptionNumber}
-                    </Text>
-                  </Flex>
-                </Row>
-                <Row>
-                  {" "}
-                  <Flex vertical>
-                    <Text className="text-color-two font-small">
-                      Inscription Id
-                    </Text>
-
-                    <Text className="text-color-one font-small font-weight-600 iconalignment">
-                      {sliceAddress(supplyModalItems?.id, 7)}
+                    <Text className="text-color-two font-small">Contract</Text>
+                    <Text className="text-color-one font-xsmall font-weight-600">
+                      {supplyModalItems?.contract}
                       <Tooltip
                         arrow
                         title={copy}
@@ -917,7 +964,9 @@ const Portfolio = (props) => {
                         <MdContentCopy
                           className="pointer"
                           onClick={() => {
-                            navigator.clipboard.writeText(supplyModalItems?.id);
+                            navigator.clipboard.writeText(
+                              supplyModalItems?.contract
+                            );
                             setCopy("Copied");
                             setTimeout(() => {
                               setCopy("Copy");
@@ -927,6 +976,15 @@ const Portfolio = (props) => {
                           color="#764ba2"
                         />
                       </Tooltip>
+                    </Text>
+                  </Flex>
+                </Row>
+                <Row>
+                  {" "}
+                  <Flex vertical>
+                    <Text className="text-color-two font-small">Token ID</Text>
+                    <Text className="text-color-one font-small font-weight-600 iconalignment">
+                      #{supplyModalItems.tokenId}
                     </Text>
                   </Flex>
                 </Row>
@@ -945,7 +1003,7 @@ const Portfolio = (props) => {
           <Col md={18}>
             <Row justify={"center"}>
               <Text className="gradient-text-two font-xslarge font-weight-600 ">
-                {Capitalaize(supplyModalItems?.collection?.symbol)}
+                {Capitalaize(supplyModalItems?.collection?.name)}
               </Text>
             </Row>
 
@@ -954,21 +1012,26 @@ const Portfolio = (props) => {
                 <Text className="text-color-two font-small">Floor Price</Text>
 
                 <Text className="text-color-one font-small font-weight-600">
-                  {supplyModalItems?.collection?.floorPrice / BTC_ZERO}
+                  {supplyModalItems?.collection?.floorAskPrice?.amount?.decimal
+                    ? supplyModalItems?.collection?.floorAskPrice?.amount
+                        ?.decimal
+                    : "-"}
                 </Text>
               </Flex>
               <Flex vertical className="borrowDataStyle">
-                <Text className="text-color-two font-small">Total Listed</Text>
+                <Text className="text-color-two font-small">Token Count</Text>
 
                 <Text className="text-color-one font-small font-weight-600">
-                  {supplyModalItems?.collection?.totalListed}
+                  {supplyModalItems?.collection?.tokenCount}
                 </Text>
               </Flex>
               <Flex vertical className="borrowDataStyle">
                 <Text className="text-color-two font-small">Total Volume</Text>
 
                 <Text className="text-color-one font-small font-weight-600">
-                  {supplyModalItems?.collection?.totalVolume}
+                  {supplyModalItems?.collection?.volume?.allTime
+                    ? supplyModalItems?.collection?.volume?.allTime
+                    : 0}
                 </Text>
               </Flex>
             </Row>
@@ -979,17 +1042,17 @@ const Portfolio = (props) => {
 
                 <Row justify={"center"}>
                   <Text className="text-color-one font-small font-weight-600">
-                    {supplyModalItems?.collection?.owners}
+                    {supplyModalItems?.collection?.ownerCount}
                   </Text>
                 </Row>
               </Flex>
               <Flex vertical>
-                <Text className="text-color-two font-small ">
-                  Pending Transactions
-                </Text>
+                <Text className="text-color-two font-small ">Created At</Text>
                 <Row justify={"center"}>
                   <Text className="text-color-one font-small font-weight-600">
-                    {supplyModalItems?.collection?.pendingTransactions}
+                    {new Date(
+                      supplyModalItems?.collection?.createdAt
+                    ).toUTCString()}
                   </Text>
                 </Row>
               </Flex>
@@ -1027,8 +1090,8 @@ const Portfolio = (props) => {
           <Col xs={11}>
             <Flex gap={5} vertical align="center">
               <img
-                src={supplyModalItems?.display_image_url}
-                alt={`${supplyModalItems.identifier}-borrow_image`}
+                src={supplyModalItems?.image}
+                alt={`${supplyModalItems.tokenId}-borrow_image`}
                 className="border-radius-30"
                 width={70}
                 height={70}
@@ -1038,20 +1101,25 @@ const Portfolio = (props) => {
           </Col>
 
           <Col xs={11}>
-            <Flex vertical className="borrowDataStyle">
-              <Text className="text-color-two font-small">Floor</Text>
+            <Flex vertical gap={5}>
+              <Flex vertical className="borrowDataStyle border border-radius-5">
+                <Text className="text-color-two font-small">Floor</Text>
 
-              <Text className="text-color-one font-xsmall font-weight-600">
-                {supplyModalItems?.price?.floor_price}
-              </Text>
-            </Flex>
+                <Text className="text-color-one font-xsmall font-weight-600">
+                  {supplyModalItems?.collection?.floorAskPrice?.amount?.decimal
+                    ? supplyModalItems?.collection?.floorAskPrice?.amount
+                        ?.decimal
+                    : "-"}
+                </Text>
+              </Flex>
 
-            <Flex vertical className="borrowDataStyle">
-              <Text className="text-color-two font-small">Total Volume</Text>
+              <Flex vertical className="borrowDataStyle border">
+                <Text className="text-color-two font-small">Token ID</Text>
 
-              <Text className="text-color-one font-xsmall font-weight-600">
-                {supplyModalItems?.price?.volume}
-              </Text>
+                <Text className="text-color-one font-xsmall font-weight-600">
+                  {supplyModalItems?.tokenId}
+                </Text>
+              </Flex>
             </Flex>
           </Col>
         </Row>
@@ -1060,13 +1128,21 @@ const Portfolio = (props) => {
           <span className="text-color-two font-medium">Contract</span>
         </Row>
 
-        <Row justify={"space-around"} align={"middle"} className="border">
-          <Col md={18}>
-            <span className="text-color-two">{supplyModalItems.contract}</span>
+        <Row
+          justify={"space-around"}
+          align={"middle"}
+          className="border border-radius-5"
+        >
+          <Col md={19}>
+            <span className="text-color-two font-xssmall">
+              {supplyModalItems.contract}
+            </span>
           </Col>
           <Col md={3}>
-            <Row justify={"end"}>
-              <Link to={supplyModalItems.opensea_url}>
+            <Row justify={"end"} align="middle" className="mt-5">
+              <Link
+                to={`https://etherscan.io/address/${supplyModalItems}.contract`}
+              >
                 <TbSend className="pointer" size={20} color="#764ba2" />
               </Link>
             </Row>
@@ -1080,13 +1156,14 @@ const Portfolio = (props) => {
               value={agreeCheckbox}
               onChange={(e) => setAgreeCheckbox(e.target.checked)}
             />{" "}
-            I agree to transfer the NFT to EDUbridge as collateral for a loan.
+            I agree to transfer the NFT to EDU bridge as collateral for a loan.
           </span>
         </Row>
 
         <Row>
           <CustomButton
             block
+            loading={isSupplyModalLoading}
             onClick={() => {
               if (agreeCheckbox) {
                 handleTransferToken();

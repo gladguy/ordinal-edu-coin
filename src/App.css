@@ -289,9 +289,14 @@ body {
   color: #ebe6c8;
 }
 
+.font-xssmall {
+  font-size: 12px;
+}
+
 .font-xsmall {
   font-size: 13px;
 }
+
 
 .font-xmsmall {
   font-size: 15px;

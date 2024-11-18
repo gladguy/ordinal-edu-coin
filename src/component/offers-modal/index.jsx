@@ -77,7 +77,7 @@ const OffersModal = ({
       ),
     },
   ];
-  // console.log("offerModalData", offerModalData);
+  console.log("offerModalData", offerModalData);
   return (
     <ModalDisplay
       width={"70%"}
@@ -129,9 +129,13 @@ const OffersModal = ({
                     align: "center",
                     dataIndex: "borrow",
                     render: (_, obj) => {
-                      let floor = Number(offerModalData.floorPrice)
-                        ? Number(offerModalData.floorPrice)
-                        : 30000;
+                      let floor = Number(
+                        offerModalData.floorAsk?.price?.amount?.decimal
+                      )
+                        ? Number(
+                            offerModalData.floorAsk?.price?.amount?.decimal
+                          )
+                        : 0.0035;
 
                       floor = calculateOrdinalInCrypto(
                         floor,

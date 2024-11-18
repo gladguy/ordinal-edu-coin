@@ -5,12 +5,12 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Notify from "../../component/notification";
-import { rootstockApiFactory } from "../../opencampus_canister";
 import { apiFactory } from "../../ordinal_canister";
 import {
   setAgent,
   setAllBorrowRequest,
   setApprovedCollection,
+  setApprovedCollectionObj,
   setBorrowCollateral,
   setCoinValue,
   setEthValue,
@@ -21,13 +21,12 @@ import borrowJson from "../../utils/borrow_abi.json";
 import {
   API_METHODS,
   BorrowContractAddress,
+  IS_DEV,
   IS_USER,
   TokenContractAddress,
-  agentCreator,
-  apiUrl,
   calculateAPY,
+  custodyAddress,
   ordinals,
-  rootstock,
 } from "../../utils/common";
 import tokenAbiJson from "../../utils/tokens_abi.json";
 
@@ -39,20 +38,19 @@ export const propsContainer = (Component) => {
     const location = useLocation();
     const reduxState = useSelector((state) => state);
     const activeWallet = reduxState.wallet.active;
-    const xverseAddress = reduxState.wallet.xverse.ordinals.address;
-    const unisatAddress = reduxState.wallet.unisat.address;
-    const magicEdenAddress = reduxState.wallet.magicEden.ordinals.address;
     const metaAddress = reduxState.wallet.meta.address;
     const api_agent = reduxState.constant.agent;
-    const coinValue = reduxState.constant.coinValue;
     const collections = reduxState.constant.collection;
     const approvedCollections = reduxState.constant.approvedCollections;
     const userAssets = reduxState.constant.userAssets;
+    const borrowCollateral = reduxState.constant.borrowCollateral;
     const ckBtcAgent = reduxState.constant.ckBtcAgent;
     const ckBtcActorAgent = reduxState.constant.ckBtcActorAgent;
     const ckEthAgent = reduxState.constant.ckEthAgent;
     const ckEthActorAgent = reduxState.constant.ckEthActorAgent;
     const withdrawAgent = reduxState.constant.withdrawAgent;
+    const coinValue = reduxState.constant.coinValue;
+    const ethvalue = reduxState.constant.ethvalue;
 
     const [isEthConnected, setIsEthConnected] = useState(false);
 
@@ -69,15 +67,7 @@ export const propsContainer = (Component) => {
       }
     }, [activeWallet.length]);
 
-    const address = xverseAddress
-      ? xverseAddress
-      : unisatAddress
-      ? unisatAddress
-      : magicEdenAddress;
-
-    const WAHEED_ADDRESS = process.env.REACT_APP_WAHEED_ADDRESS;
-
-    const btcPrice = async () => {
+    const ethPrice = async () => {
       const ethData = await API_METHODS.get(
         `${process.env.REACT_APP_COINGECKO_API}?ids=${process.env.REACT_APP_BTC_TICKER}&vs_currencies=usd`
       );
@@ -86,7 +76,7 @@ export const propsContainer = (Component) => {
 
     const fetchETHLiveValue = async () => {
       try {
-        const ethData = await btcPrice();
+        const ethData = await ethPrice();
         if (ethData.data["ethereum"]) {
           const EthValue = ethData.data["ethereum"].usd;
           dispatch(setEthValue(EthValue));
@@ -147,13 +137,13 @@ export const propsContainer = (Component) => {
           "oreraid",
           "everybodys",
           "moongirls-emanuele-ferrari",
-          // "wonderful-composition-with-grids",
-          // "etherpolice-origin",
-          // "akutar-accessories",
-          // "end-of-sartoshi",
-          // "egglins-xyz",
+          "wonderful-composition-with-grids",
+          "etherpolice-origin",
+          "akutar-accessories",
+          "end-of-sartoshi",
+          "egglins-xyz",
+          "thebunnyisland",
           // "degen-goblins",
-          // "thebunnyisland",
           // "akutar-mint-pass",
           // "precious-baby-phepes",
           // "kongclub-official",
@@ -164,19 +154,18 @@ export const propsContainer = (Component) => {
         const collectionPromise = approvedCollections.map(
           async (collection) => {
             return new Promise(async (resolve) => {
-              let config = {
-                method: "get",
-                maxBodyLength: Infinity,
-                url: `${process.env.REACT_APP_OPENSEA_API}/api/v2/collections/${collection}`,
+              const options = {
+                method: "GET",
+                url: `${process.env.REACT_APP_MAGICEDEN_API}/v3/rtp/ethereum/collections/v7?slug=${collection}`,
                 headers: {
-                  "x-api-key": process.env.REACT_APP_OPENSEA_APIKEY,
+                  accept: "*/*",
+                  Authorization: process.env.REACT_APP_MAGICEDEN_BEARER,
                 },
               };
-
               axios
-                .request(config)
+                .request(options)
                 .then((response) => {
-                  resolve(response.data);
+                  resolve(...response.data.collections);
                 })
                 .catch((error) => {
                   console.log(error);
@@ -188,7 +177,7 @@ export const propsContainer = (Component) => {
         const collectionDetails = await Promise.all(collectionPromise);
         const finalResult = collectionDetails.map((col) => {
           // const { yield: yields, terms } = col;
-          const term = Number(7);
+          const term = 7;
           const APY = calculateAPY(5, term);
           const LTV = 0;
           return {
@@ -198,7 +187,13 @@ export const propsContainer = (Component) => {
             LTV,
           };
         });
+        console.log("finalResult", finalResult);
+        let collectionObj = {};
+        finalResult.forEach((col) => {
+          collectionObj[col.slug] = col;
+        });
         dispatch(setApprovedCollection(finalResult));
+        dispatch(setApprovedCollectionObj(collectionObj));
         // }
         // dispatch(setCollection(collections));
         // }
@@ -206,138 +201,138 @@ export const propsContainer = (Component) => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [api_agent, dispatch]);
 
-    const getCollectionDetails = async (filteredData) => {
-      try {
-        const isFromApprovedAssets = filteredData.map(async (asset) => {
-          return new Promise(async (resolve) => {
-            const result = await API_METHODS.get(
-              `${apiUrl.Asset_server_base_url}/api/v2/fetch/asset/${asset.id}`
-            );
-            resolve(...result.data?.data?.tokens);
-          });
-        });
-        const revealedPromise = await Promise.all(isFromApprovedAssets);
-        let collectionSymbols = {};
-        collections.forEach(
-          (collection) =>
-            (collectionSymbols = {
-              ...collectionSymbols,
-              [collection.symbol]: collection,
-            })
-        );
-        const collectionNames = collections.map(
-          (collection) => collection.symbol
-        );
-        const isFromApprovedCollections = revealedPromise.filter((assets) =>
-          collectionNames.includes(assets.collectionSymbol)
-        );
-
-        const finalPromise = isFromApprovedCollections.map((asset) => {
-          const collection = collectionSymbols[asset.collectionSymbol];
-          return {
-            ...asset,
-            collection,
-          };
-        });
-        return finalPromise;
-      } catch (error) {
-        console.log("getCollectionDetails error", error);
-      }
-    };
-
-    const fetchWalletAssets = async (address) => {
-      try {
-        const result = await API_METHODS.get(
-          `${apiUrl.Asset_server_base_url}/api/v1/fetch/assets/${address}`
-        );
-        if (result.data?.data?.length) {
-          const filteredData = result.data.data.filter(
-            (asset) =>
-              asset.mimeType === "text/html" ||
-              asset.mimeType === "image/webp" ||
-              asset.mimeType === "image/jpeg" ||
-              asset.mimeType === "image/png" ||
-              asset.mimeType === "image/svg+xml"
-          );
-          const finalPromise = await getCollectionDetails(filteredData);
-          return finalPromise;
-        } else {
-          return [];
-        }
-      } catch (error) {
-        console.log("error", error);
-      }
-    };
-
     const getCollaterals = async () => {
-      let colResult = [];
       try {
-        const API = agentCreator(rootstockApiFactory, rootstock);
-        const userAssets = await API.getUserSupply(
-          IS_USER ? address : WAHEED_ADDRESS
-        );
-        const supplyData = userAssets.map((asset) => JSON.parse(asset));
-        colResult = await getCollectionDetails(supplyData);
-        // --------------------------------------------------
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const signer = provider.getSigner();
-        const contract = new ethers.Contract(
-          TokenContractAddress,
-          tokenAbiJson,
-          signer
-        );
+        const options = {
+          method: "GET",
+          url: `${process.env.REACT_APP_MAGICEDEN_API}/v3/rtp/polygon/users/activity/v6?users=${custodyAddress}&limit=20&sortBy=eventTimestamp&includeMetadata=true`,
+          headers: {
+            accept: "*/*",
+            Authorization: process.env.REACT_APP_MAGICEDEN_BEARER,
+          },
+        };
 
-        const tokens = await contract.tokensOfOwner(metaAddress);
-
-        const userMintedTokens = tokens.map((token) =>
-          Number(token.toString())
+        const result = await axios.request(options);
+        const activities = result.data.activities.filter(
+          (activity) => activity.type === "transfer"
         );
+        console.log("activities", activities);
 
-        const finalData = colResult.map((asset) => {
-          let data = { ...asset, collection: {} };
-          approvedCollections.forEach((col) => {
-            if (col.symbol === asset.collection.symbol) {
-              data = {
-                ...asset,
-                collection: col,
-                isToken: userMintedTokens.includes(asset.inscriptionNumber)
-                  ? true
-                  : false,
-              };
-            }
+        const userActivity = activities.filter(
+          (activity) =>
+            activity.fromAddress.toLowerCase() === metaAddress.toLowerCase() &&
+            activity.toAddress.toLowerCase() === custodyAddress.toLowerCase()
+        );
+        const uniqueTokens = userActivity.reduce((map, item) => {
+          const { tokenId } = item.token;
+          // If tokenId doesn't exist in map or the current item's timestamp is more recent
+          if (!map[tokenId] || map[tokenId].timestamp < item.timestamp) {
+            map[tokenId] = item; // Update with the more recent entry
+          }
+          return map;
+        }, {});
+        try {
+          // const API = agentCreator(rootstockApiFactory, rootstock);
+          // const userAssets = await API.getUserSupply(
+          //   IS_USER ? address : WAHEED_ADDRESS
+          // );
+          // const supplyData = userAssets.map((asset) => JSON.parse(asset));
+          // colResult = await getCollectionDetails(supplyData);
+          // --------------------------------------------------
+
+          // console.log(Object.values(uniqueTokens));
+          // setEthAssets(Object.values(uniqueTokens));
+
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const signer = provider.getSigner();
+          const contract = new ethers.Contract(
+            TokenContractAddress,
+            tokenAbiJson,
+            signer
+          );
+
+          const loanContract = new ethers.Contract(
+            BorrowContractAddress,
+            borrowJson,
+            signer
+          );
+
+          const tokens = await contract.tokensOfOwner(metaAddress);
+          const userRequest = await loanContract.getBorrowRequestsByUser(
+            metaAddress
+          );
+
+          const userMintedTokens = tokens.map((token) =>
+            Number(token.toString())
+          );
+
+          const userRequestTokens = userRequest.map((req) => {
+            return {
+              tokenId: Number(req.tokenId),
+              borrower: req.borrower,
+              tokenAddress: req.tokenAddress,
+              createdAt: Number(req.createdAt),
+              duration: Number(req.duration),
+              isActive: req.isActive,
+              loanAmount: Number(req.loanAmount),
+              nftContract: req.nftContract,
+              platformFee: Number(req.platformFee),
+              repayAmount: Number(req.repayAmount),
+              requestId: Number(req.requestId),
+            };
           });
-          return data;
-        });
 
-        const borrowCollateral = finalData.filter((asset) => asset.isToken);
-        dispatch(setBorrowCollateral(borrowCollateral));
-        dispatch(setUserCollateral(finalData));
-      } catch (error) {
-        if (
-          error.message.includes("No NFT found") ||
-          error.message.includes("No single NFT has been minted yet")
-        ) {
-          const finalData = colResult.map((asset) => {
-            let data = { ...asset, collection: {} };
-            approvedCollections.forEach((col) => {
-              if (col.symbol === asset.collection.symbol) {
-                data = {
-                  ...asset,
-                  collection: col,
-                  isToken: [].includes(asset.inscriptionNumber) ? true : false,
-                };
-              }
-            });
-            return data;
+          // const finalData = userAssets.map((asset) => {
+          //   const req = userRequestTokens.find(
+          //     (req) => req.tokenId === Number(asset.tokenId)
+          //   );
+
+          //   return {
+          //     ...asset,
+          //     isToken: userMintedTokens.includes(Number(asset.tokenId))
+          //       ? true
+          //       : false,
+          //     isBorrowRequest: req ? true : false,
+          //   };
+          // });
+
+          const finalData = Object.values(uniqueTokens).map((asset) => {
+            const req = userRequestTokens.find(
+              (req) => req.tokenId === Number(asset.token.tokenId)
+            );
+
+            return {
+              ...asset,
+              isToken: userMintedTokens.includes(Number(asset.token.tokenId))
+                ? true
+                : false,
+              isBorrowRequest: req ? true : false,
+            };
           });
+          console.log("finaldata", finalData);
 
           const borrowCollateral = finalData.filter((asset) => asset.isToken);
+
           dispatch(setBorrowCollateral(borrowCollateral));
           dispatch(setUserCollateral(finalData));
-        } else {
-          console.log("Collateral fetching error", error.message);
+        } catch (error) {
+          if (
+            error.message.includes("No NFT found") ||
+            error.message.includes("No single NFT has been minted yet")
+          ) {
+            const finalData = Object.values(uniqueTokens).map((asset) => {
+              return {
+                ...asset,
+                isToken: [].includes(Number(asset.tokenId)) ? true : false,
+              };
+            });
+            dispatch(setBorrowCollateral([]));
+            dispatch(setUserCollateral(finalData));
+          } else {
+            console.log("Collateral fetching error", error.message);
+          }
         }
-      }
+      } catch (error) {}
     };
 
     const getAllBorrowRequests = async () => {
@@ -349,8 +344,24 @@ export const propsContainer = (Component) => {
           borrowJson,
           signer
         );
-        const ActiveReq = await borrowContract.getActiveBorrowRequests();
-        dispatch(setAllBorrowRequest(ActiveReq));
+        const activeReq = await borrowContract.getActiveBorrowRequests();
+        const userActiveRequest = activeReq.map((req) => {
+          return {
+            tokenId: Number(req.tokenId),
+            borrower: req.borrower,
+            tokenAddress: req.tokenAddress.toLowerCase(),
+            createdAt: Number(req.createdAt),
+            duration: Number(req.duration),
+            isActive: req.isActive,
+            loanAmount: Number(req.loanAmount),
+            nftContract: req.nftContract,
+            platformFee: Number(req.platformFee),
+            repayAmount: Number(req.repayAmount),
+            requestId: Number(req.requestId),
+          };
+        });
+
+        dispatch(setAllBorrowRequest(userActiveRequest));
       } catch (error) {
         console.log("fetching all borrow request error", error);
       }
@@ -384,81 +395,58 @@ export const propsContainer = (Component) => {
     }, [api_agent, dispatch]);
 
     useEffect(() => {
+      console.log("COND", activeWallet.length && !userAssets);
+
       if (activeWallet.length && !userAssets) {
-        // const result = await fetchWalletAssets(
-        //   IS_USER
-        //     ? xverseAddress
-        //       ? xverseAddress
-        //       : unisatAddress
-        //       ? unisatAddress
-        //       : magicEdenAddress
-        //     : WAHEED_ADDRESS
-        // );
-        // const testData = result?.reduce((acc, curr) => {
-        //   // Find if there is an existing item with the same collectionSymbol
-        //   let existingItem = acc.find(
-        //     (item) => item.collectionSymbol === curr.collectionSymbol
-        //   );
-
-        //   if (existingItem) {
-        //     // If found, add the current item to the duplicates array
-        //     if (!existingItem.duplicates) {
-        //       existingItem.duplicates = [];
-        //     }
-        //     existingItem.duplicates.push(curr);
-        //   } else {
-        //     // If not found, add the current item to the accumulator
-        //     acc.push(curr);
-        //   }
-
-        //   return acc;
-        // }, []);
-
-        // // Without getting duplicate
-        // // const uniqueData = result?.filter(
-        // //   (obj, index, self) =>
-        // //     index ===
-        // //     self.findIndex((o) => o.collectionSymbol === obj.collectionSymbol)
-        // // );
-
-        // if (testData?.length) {
-        //   dispatch(setUserAssets(testData));
-        // }
-
         let config = {
           method: "get",
-          url: `${
-            process.env.REACT_APP_OPENSEA_API
-          }/api/v2/chain/ethereum/account/${
+          url: `${process.env.REACT_APP_MAGICEDEN_API}/v3/rtp/${
+            IS_DEV ? "polygon" : "ethereum"
+          }/users/${
             IS_USER ? metaAddress : "0xE98b997f529F643Bc67F217B1270A0F7D7a0EcB2"
-          }/nfts`,
+          }/tokens/v7?normalizeRoyalties=false&sortBy=acquiredAt&sortDirection=desc&limit=200&includeTopBid=false&includeAttributes=false&includeLastSale=false&includeRawData=false&filterSpamTokens=false&useNonFlaggedFloorAsk=false`,
           headers: {
-            "x-api-key": process.env.REACT_APP_OPENSEA_APIKEY,
+            Authorization: process.env.REACT_APP_MAGICEDEN_BEARER,
           },
         };
 
         axios
           .request(config)
           .then((response) => {
-            dispatch(setUserAssets(response.data.nfts));
+            const isSpamFilter = response.data.tokens.filter(
+              (collection) => !collection.token.collection.isSpam
+            );
+            console.log("isSpamFilter", isSpamFilter);
+
+            const result = isSpamFilter.map((collection) => {
+              return {
+                ...collection.token,
+              };
+            });
+            dispatch(setUserAssets(result));
           })
           .catch((error) => {
             console.log(error);
           });
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeWallet, collections]);
+    }, [activeWallet, collections, metaAddress]);
 
     useEffect(() => {
-      if (activeWallet.length && approvedCollections[0]) {
-        // getCollaterals();
+      if (
+        activeWallet.length &&
+        approvedCollections[0] &&
+        !borrowCollateral.length &&
+        userAssets
+      ) {
+        getCollaterals();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeWallet, approvedCollections]);
+    }, [activeWallet, approvedCollections, userAssets]);
 
     useEffect(() => {
       if (activeWallet.length) {
-        // getAllBorrowRequests();
+        getAllBorrowRequests();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeWallet]);

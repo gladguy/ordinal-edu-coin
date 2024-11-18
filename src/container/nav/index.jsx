@@ -1,4 +1,3 @@
-import { useWallets } from "@wallet-standard/react";
 import {
   Col,
   ConfigProvider,
@@ -14,7 +13,6 @@ import {
   Tour,
   Typography,
 } from "antd";
-import { ethers } from "ethers";
 import { motion } from "framer-motion";
 import gsap from "gsap";
 import React, { useEffect, useRef, useState } from "react";
@@ -22,10 +20,7 @@ import { AiOutlineDisconnect } from "react-icons/ai";
 import { PiCopyBold } from "react-icons/pi";
 import { RiWallet3Fill } from "react-icons/ri";
 import { RxHamburgerMenu } from "react-icons/rx";
-import { AddressPurpose, BitcoinNetworkType, getAddress } from "sats-connect";
 import Web3 from "web3";
-import ordinals_O_logo from "../../assets/brands/ordinals_O_logo.png";
-import Bitcoin from "../../assets/coin_logo/Bitcoin.png";
 import logo from "../../assets/coin_logo/edu_coin.png";
 import myordinalslogo from "../../assets/logo/ordinalslogo.png";
 import CustomButton from "../../component/Button";
@@ -43,29 +38,20 @@ import {
   setMetaCredentials,
   setUnisatCredentials,
 } from "../../redux/slice/wallet";
-import { storageIdlFactory } from "../../storage_canister";
 import {
-  agentCreator,
-  API_METHODS,
-  apiUrl,
-  BTCWallets,
   chainId,
-  IndexContractAddress,
   MAGICEDEN_WALLET_KEY,
   META_WALLET_KEY,
   paymentWallets,
   sliceAddress,
-  storage,
   UNISAT_WALLET_KEY,
 } from "../../utils/common";
-import indexJson from "../../utils/index_abi.json";
 import { propsContainer } from "../props-container";
 
 const Nav = (props) => {
   const { Text } = Typography;
   const { useBreakpoint } = Grid;
   const breakPoint = useBreakpoint();
-  const { wallets } = useWallets();
 
   const { location, navigate } = props.router;
   const { dispatch, reduxState } = props.redux;
@@ -73,8 +59,6 @@ const Nav = (props) => {
   const walletState = reduxState.wallet;
   const activeWallet = reduxState.wallet.active;
   const metaAddress = walletState.meta.address;
-  const unisatAddress = walletState.unisat.address;
-  const magicEdenAddress = walletState.magicEden.ordinals.address;
 
   const [isConnectModal, setConnectModal] = useState(false);
   const [tabKey, setTabKey] = useState("1");
@@ -89,7 +73,6 @@ const Nav = (props) => {
   const [activeAddresses, setActiveAddresses] = useState({});
 
   const avatar = process.env.REACT_APP_AVATAR;
-  const SatsConnectNamespace = "sats-connect:";
 
   const { confirm } = Modal;
   const ref1 = useRef(null);
@@ -200,10 +183,6 @@ const Nav = (props) => {
     }
   }, [current, location.pathname]);
 
-  const errorMessageNotify = (message) => {
-    Notify("error", message);
-  };
-
   const successMessageNotify = (message) => {
     Notify("success", message);
   };
@@ -213,168 +192,76 @@ const Nav = (props) => {
     setOpen(false);
   };
 
-  function isSatsConnectCompatibleWallet(wallet) {
-    return SatsConnectNamespace in wallet.features;
-  }
-
   const connectWallet = async (walletName) => {
-    if (walletName === UNISAT_WALLET_KEY) {
-      // UNISAT
-      if (typeof window.unisat !== "undefined") {
-        try {
-          dispatch(setLoading(true));
-          var accounts = await window.unisat.requestAccounts();
-          let publicKey = await window.unisat.getPublicKey();
-          let { confirmed: BtcBalance } = await window.unisat.getBalance();
-          dispatch(setLoading(false));
-          setWalletConnection({
-            ...walletConnection,
-            [UNISAT_WALLET_KEY]: {
-              address: accounts[0],
-              publicKey,
-              btcBalance: BtcBalance / process.env.REACT_APP_BTC_ZERO,
-            },
-          });
-          setActiveConnections([...activeConnections, UNISAT_WALLET_KEY]);
-          setActiveAddresses({
-            ...activeAddresses,
-            [UNISAT_WALLET_KEY]: accounts[0],
-          });
-          successMessageNotify("Unisat Wallet connected!");
-        } catch (error) {
-          dispatch(setLoading(false));
-          errorMessageNotify(error.message);
-        }
-      } else {
-        errorMessageNotify("No unisat wallet installed!");
-      }
-    } else if (walletName === MAGICEDEN_WALLET_KEY) {
+    // Meta wallet
+    if (window.ethereum) {
+      const web3 = new Web3(window.ethereum);
       try {
-        const provider = wallets.find(isSatsConnectCompatibleWallet);
-        await getAddress({
-          getProvider: async () =>
-            provider.features[SatsConnectNamespace]?.provider,
-          payload: {
-            purposes: [AddressPurpose.Ordinals, AddressPurpose.Payment],
-            message: "Address for receiving Ordinals and payments",
-            network: {
-              type: BitcoinNetworkType.Mainnet,
-            },
-          },
-          onFinish: async (response) => {
-            const { addresses } = response;
-            const ordinals = addresses.find(
-              (ele) => ele.purpose === AddressPurpose.Ordinals
-            );
-            const payment = addresses.find(
-              (ele) => ele.purpose === AddressPurpose.Payment
-            );
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        const accounts = await web3.eth.getAccounts();
+        const networkId = await web3.eth.net.getId();
 
-            const result = await API_METHODS.get(
-              `${apiUrl.Unisat_open_api}/v1/indexer/address/${payment.address}/balance`,
-              {
-                headers: {
-                  Authorization: `Bearer ${process.env.REACT_APP_UNISAT_BEARER}`,
-                },
-              }
-            );
-
-            const magicEdenBtc =
-              result.data.data.satoshi / process.env.REACT_APP_BTC_ZERO;
-            setWalletConnection({
-              ...walletConnection,
-              [MAGICEDEN_WALLET_KEY]: {
-                ordinals,
-                payment,
-                btcBalance: magicEdenBtc,
-              },
+        if (Number(networkId) !== chainId) {
+          Notify("error", "Switch to the EDU open campus network!");
+          try {
+            await window.ethereum.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId }],
             });
-            setActiveConnections([...activeConnections, MAGICEDEN_WALLET_KEY]);
-            setActiveAddresses({
-              ...activeAddresses,
-              [MAGICEDEN_WALLET_KEY]: ordinals.address,
-            });
-            successMessageNotify("Magiceden Wallet connected!");
-          },
-          onCancel: () => {
-            // alert("Request canceled");
-          },
-        });
-      } catch (err) {
-        console.log("magiceden error", err);
-      }
-    } else {
-      // Meta wallet
-      if (window.ethereum) {
-        const web3 = new Web3(window.ethereum);
-        try {
-          await window.ethereum.request({ method: "eth_requestAccounts" });
-          const accounts = await web3.eth.getAccounts();
-          const networkId = await web3.eth.net.getId();
-
-          if (Number(networkId) !== chainId) {
-            Notify("error", "Switch to the EDU open campus network!");
-            try {
-              await window.ethereum.request({
-                method: "wallet_switchEthereumChain",
-                params: [{ chainId }],
-              });
-            } catch (switchError) {
-              if (switchError.code === 4902) {
-                // This error code indicates that the chain has not been added to MetaMask.
-                try {
-                  await window.ethereum.request({
-                    method: "wallet_addEthereumChain",
-                    params: [
-                      {
-                        chainId: "0xA045C",
-                        chainName: "Open Campus Codex",
-                        rpcUrls: [
-                          "https://rpc.open-campus-codex.gelato.digital/",
-                        ],
-                        blockExplorerUrls: [
-                          "https://opencampus-codex.blockscout.com/",
-                        ],
-                        nativeCurrency: {
-                          name: "EDU Token",
-                          symbol: "EDU", // Replace with the symbol of the native token
-                          decimals: 18,
-                        },
+          } catch (switchError) {
+            if (switchError.code === 4902) {
+              // This error code indicates that the chain has not been added to MetaMask.
+              try {
+                await window.ethereum.request({
+                  method: "wallet_addEthereumChain",
+                  params: [
+                    {
+                      chainId: "0xA045C",
+                      chainName: "Open Campus Codex",
+                      rpcUrls: [
+                        "https://rpc.open-campus-codex.gelato.digital/",
+                      ],
+                      blockExplorerUrls: [
+                        "https://opencampus-codex.blockscout.com/",
+                      ],
+                      nativeCurrency: {
+                        name: "EDU Token",
+                        symbol: "EDU", // Replace with the symbol of the native token
+                        decimals: 18,
                       },
-                    ],
-                  });
-                } catch (addError) {
-                  console.error("Failed to add the network:", addError);
-                }
-              } else {
-                console.error("Failed to switch the network:", switchError);
+                    },
+                  ],
+                });
+              } catch (addError) {
+                console.error("Failed to add the network:", addError);
               }
+            } else {
+              console.error("Failed to switch the network:", switchError);
             }
           }
-          setWalletConnection({
-            ...walletConnection,
-            [META_WALLET_KEY]: {
-              address: accounts[0],
-              publicKey: null,
-            },
-          });
-          setActiveConnections([...activeConnections, META_WALLET_KEY]);
-          setActiveAddresses({
-            ...activeAddresses,
-            [META_WALLET_KEY]: accounts[0],
-          });
-        } catch (error) {
-          console.error("User denied account access", error);
         }
-      } else if (window.web3) {
-        // Legacy dapp browsers...
-        // const web3 = new Web3(window.web3.currentProvider);
-      } else {
-        Notify(
-          "warning",
-          "Non-Ethereum browser detected. You should consider trying MetaMask!"
+        dispatch(
+          setMetaCredentials({
+            address: accounts[0],
+            publicKey: null,
+          })
         );
+        Notify("success", "Wallet connection success!");
+        collapseConnectedModal();
+        dispatch(setLoading(false));
+      } catch (error) {
+        console.error("User denied account access", error);
       }
+    } else if (window.web3) {
+      console.log("INSIDE ELSE IF");
+
+      // Legacy dapp browsers...
+      // const web3 = new Web3(window.web3.currentProvider);
+    } else {
+      Notify(
+        "warning",
+        "Non-Ethereum browser detected. You should consider trying MetaMask!"
+      );
     }
   };
 
@@ -385,104 +272,6 @@ const Nav = (props) => {
       dispatch(setUnisatCredentials(walletConnection[UNISAT_WALLET_KEY]));
     } else {
       dispatch(setMagicEdenCredentials(walletConnection[MAGICEDEN_WALLET_KEY]));
-    }
-  };
-
-  const handleConnectionFinish = async () => {
-    collapseConnectedModal();
-    try {
-      dispatch(setLoading(true));
-      let isConnectionExist = false;
-      const API = agentCreator(storageIdlFactory, storage);
-      const btcAddress = walletConnection?.xverse
-        ? walletConnection.xverse.ordinals.address
-        : walletConnection?.magiceden
-        ? walletConnection.magiceden.ordinals.address
-        : walletConnection?.unisat?.address;
-      const metaAddress = walletConnection.meta.address;
-
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const contract = new ethers.Contract(
-        IndexContractAddress,
-        indexJson,
-        signer
-      );
-      const isAcExist = await contract.getBitcoinAddressId(metaAddress);
-      const isAccountExistInABI = Number(isAcExist.toString());
-
-      let verifyAddress = await API.verifyAddressPair({
-        chain_id: chainId,
-        bitcoinAddress: btcAddress,
-        ethereumAddress: metaAddress,
-      });
-      verifyAddress = Number(verifyAddress);
-      console.log("verifyAddress", verifyAddress);
-
-      if (verifyAddress === 0 && isAccountExistInABI) {
-        isConnectionExist = true;
-      } else if (verifyAddress === 1) {
-        const btcAddress = await API.getByEthereumAddress({
-          chainId: chainId,
-          ethereumAddress: metaAddress,
-        });
-        Notify(
-          "warning",
-          `Account not found, try connecting ${btcAddress} BTC account!`
-        );
-      } else if (verifyAddress === 2) {
-        const ethAddress = await API.getByBitcoinAddress({
-          chainId: chainId,
-          bitcoinAddress: btcAddress,
-        });
-        Notify(
-          "warning",
-          `Account not found, try connecting ${ethAddress} ETH account!`
-        );
-      } else if (verifyAddress === 3) {
-        const storeAddress = await API.storeAddress({
-          chain_id: chainId,
-          bitcoinAddress: btcAddress,
-          ethereumAddress: metaAddress,
-        });
-        console.log(
-          "storeAddress",
-          storeAddress,
-          "isAccountExistInABI",
-          isAccountExistInABI
-        );
-
-        if (!isAccountExistInABI) {
-          console.log("Inside");
-
-          const saveResult = await contract.saveBitcoinAddress(
-            Number(storeAddress),
-            metaAddress
-          );
-          console.log("saveResult", saveResult);
-
-          if (saveResult.hash) {
-            Notify("success", "Account creation success!", 3000);
-          }
-        }
-        isConnectionExist = true;
-      }
-      console.log("isConnectionExist", isConnectionExist);
-
-      if (isConnectionExist) {
-        activeConnections.forEach((wallet) => {
-          storeWallets(wallet);
-        });
-        Notify("success", "Wallet connection success!");
-        collapseConnectedModal();
-      }
-      dispatch(setLoading(false));
-    } catch (error) {
-      dispatch(setLoading(false));
-      setWalletConnection({});
-      setActiveConnections([]);
-      setActiveAddresses({});
-      console.log("finish connection error", error);
     }
   };
 
@@ -632,13 +421,7 @@ const Nav = (props) => {
 
   const avatarRenderer = (width) => (
     <img
-      src={`${avatar}/svg?seed=${
-        unisatAddress
-          ? unisatAddress
-          : magicEdenAddress
-          ? magicEdenAddress
-          : metaAddress
-      }`}
+      src={`${avatar}/svg?seed=${metaAddress}`}
       width={width}
       className="avatar"
       alt="avatar"
@@ -892,6 +675,7 @@ const Nav = (props) => {
           collapseConnectedModal();
           setWalletConnection({});
           setActiveConnections([]);
+          setActiveAddresses({});
         }}
         width={breakPoint.xs ? "100%" : "35%"}
       >
@@ -986,55 +770,55 @@ const Nav = (props) => {
                     </>
                   ),
                 },
-                {
-                  key: "2",
-                  label: (
-                    <Row align={"middle"}>
-                      <img
-                        src={Bitcoin}
-                        alt="noimage"
-                        style={{ paddingRight: "10px" }}
-                        width={25}
-                      />
-                      <Text className="font-weight-600 letter-spacing-medium text-color-one font-large">
-                        {" "}
-                        BTC
-                      </Text>
-                    </Row>
-                  ),
-                  children: (
-                    <>
-                      {BTCWallets.map((wallet, index) => {
-                        return (
-                          <Row key={`index-${wallet.key}`}>
-                            {walletCards(wallet, index)}
-                          </Row>
-                        );
-                      })}
-                    </>
-                  ),
-                },
-                {
-                  key: "3",
-                  label: (
-                    <>
-                      {activeConnections.length === 2 ? (
-                        <Row align={"middle"}>
-                          <CustomButton
-                            block
-                            title={"Sign in"}
-                            onClick={handleConnectionFinish}
-                            className={
-                              "click-btn font-weight-600 letter-spacing-small"
-                            }
-                          />
-                        </Row>
-                      ) : (
-                        ""
-                      )}
-                    </>
-                  ),
-                },
+                // {
+                //   key: "2",
+                //   label: (
+                //     <Row align={"middle"}>
+                //       <img
+                //         src={Bitcoin}
+                //         alt="noimage"
+                //         style={{ paddingRight: "10px" }}
+                //         width={25}
+                //       />
+                //       <Text className="font-weight-600 letter-spacing-medium text-color-one font-large">
+                //         {" "}
+                //         BTC
+                //       </Text>
+                //     </Row>
+                //   ),
+                //   children: (
+                //     <>
+                //       {BTCWallets.map((wallet, index) => {
+                //         return (
+                //           <Row key={`index-${wallet.key}`}>
+                //             {walletCards(wallet, index)}
+                //           </Row>
+                //         );
+                //       })}
+                //     </>
+                //   ),
+                // },
+                // {
+                //   key: "3",
+                //   label: (
+                //     <>
+                //       {activeConnections.length === 2 ? (
+                //         <Row align={"middle"}>
+                //           <CustomButton
+                //             block
+                //             title={"Sign in"}
+                //             onClick={handleConnectionFinish}
+                //             className={
+                //               "click-btn font-weight-600 letter-spacing-small"
+                //             }
+                //           />
+                //         </Row>
+                //       ) : (
+                //         ""
+                //       )}
+                //     </>
+                //   ),
+                // },
               ]}
             />
           </Col>
@@ -1051,13 +835,7 @@ const Nav = (props) => {
               <Flex gap={10} align="center">
                 {avatarRenderer(45)}
                 <Text className="text-color-one">
-                  {unisatAddress ? (
-                    <>{sliceAddress(unisatAddress, 5)}</>
-                  ) : magicEdenAddress ? (
-                    <>{sliceAddress(magicEdenAddress, 5)}</>
-                  ) : (
-                    <>{sliceAddress(metaAddress, 5)}</>
-                  )}
+                  {metaAddress ? <>{sliceAddress(metaAddress, 5)}</> : ""}
                 </Text>
               </Flex>
             </Row>
@@ -1133,64 +911,6 @@ const Nav = (props) => {
 
             <Col>
               {walletState.active.includes(META_WALLET_KEY) ? null : (
-                <CustomButton
-                  className="font-size-18 black-bg text-color-one border-none"
-                  title={"Connect"}
-                  onClick={() => {
-                    if (walletState.active.length < 2) {
-                      collapseConnectedModal();
-                    } else {
-                      successMessageNotify("Wallet already connected!");
-                    }
-                  }}
-                />
-              )}
-            </Col>
-          </Row>
-
-          <Row justify={"space-between"} className="mt" align={"middle"}>
-            <Col>
-              <Flex align="center">
-                <img
-                  src={ordinals_O_logo}
-                  alt="bitcoin"
-                  style={{ marginRight: "20px", borderRadius: "50%" }}
-                  width={25}
-                />
-                <Flex vertical>
-                  <Text className="text-color-two font-medium">Ordinals</Text>
-                  <Text className="text-color-one font-xsmall">
-                    {unisatAddress ? (
-                      <>
-                        {sliceAddress(unisatAddress, 9)}{" "}
-                        {addressRendererWithCopy(unisatAddress)}
-                      </>
-                    ) : magicEdenAddress ? (
-                      <>
-                        {sliceAddress(magicEdenAddress, 9)}{" "}
-                        {addressRendererWithCopy(magicEdenAddress)}
-                      </>
-                    ) : (
-                      "---"
-                    )}
-                  </Text>
-                </Flex>
-              </Flex>
-            </Col>
-
-            {/* <Col>
-              <CustomButton
-                className="font-size-18 black-bg text-color-one border-none"
-                title={"Connect"}
-                onClick={() => {
-                  handleTransfer();
-                }}
-              />
-            </Col> */}
-
-            <Col>
-              {walletState.active.includes(UNISAT_WALLET_KEY) ||
-              walletState.active.includes(MAGICEDEN_WALLET_KEY) ? null : (
                 <CustomButton
                   className="font-size-18 black-bg text-color-one border-none"
                   title={"Connect"}

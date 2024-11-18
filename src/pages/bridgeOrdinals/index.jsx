@@ -27,9 +27,11 @@ import {
   MAGICEDEN_WALLET_KEY,
   TokenContractAddress,
   UNISAT_WALLET_KEY,
+  custodyAddress,
   sliceAddress,
 } from "../../utils/common";
 import tokenAbiJson from "../../utils/tokens_abi.json";
+import axios from "axios";
 
 const DBridge = (props) => {
   const { getCollaterals } = props.wallet;
@@ -37,19 +39,20 @@ const DBridge = (props) => {
   const activeWallet = reduxState.wallet.active;
 
   const walletState = reduxState.wallet;
+  const metaAddress = reduxState.wallet.meta.address;
   const btcValue = reduxState.constant.ethvalue;
   const coinValue = reduxState.constant.coinValue;
   const userCollateral = reduxState.constant.userCollateral;
-
-  const xverseAddress = walletState.xverse.ordinals.address;
-  const unisatAddress = walletState.unisat.address;
-  const magicEdenAddress = walletState.magicEden.ordinals.address;
+  const borrowCollateral = reduxState.constant.borrowCollateral;
+  const collectionObj = reduxState.constant.approvedCollectionsObj || {};
+  // console.log("userCollateral", userCollateral);
 
   const { Text } = Typography;
 
   // USE STATE
   const [borrowData, setBorrowData] = useState(null);
   const [lendData, setLendData] = useState([]);
+  const [ethAssets, setEthAssets] = useState([]);
 
   const [copy, setCopy] = useState("Copy");
 
@@ -98,9 +101,11 @@ const DBridge = (props) => {
     },
   ];
 
-  const handleTokenMint = async (inscriptionNumber) => {
+  const handleTokenMint = async (tokenId, contractAddress) => {
     try {
       dispatch(setLoading(true));
+      console.log("tokenId, contractAddress", tokenId, contractAddress);
+
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const contract = new ethers.Contract(
@@ -109,7 +114,7 @@ const DBridge = (props) => {
         signer
       );
 
-      const mintResult = await contract.mintOrdinal(inscriptionNumber);
+      const mintResult = await contract.mintOrdinal(tokenId, contractAddress);
       await mintResult.wait();
       if (mintResult.hash) {
         Notify("success", "Minting success!");
@@ -121,6 +126,46 @@ const DBridge = (props) => {
     } catch (error) {
       dispatch(setLoading(false));
       console.log("minting error", error);
+    }
+  };
+
+  const handleTokenBurn = async (obj) => {
+    try {
+      dispatch(setLoading(true));
+
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(
+        TokenContractAddress,
+        tokenAbiJson,
+        signer
+      );
+
+      const mintResult = await contract.burn(obj.token.tokenId);
+      await mintResult.wait();
+      if (mintResult.hash) {
+        Notify("success", "Burn success!");
+        getCollaterals();
+        // fetchContractPoints();
+      }
+
+      const result = await axios.post(
+        "http://localhost:3030/api/v1/send/token",
+        {
+          tokenId: obj.token.tokenId,
+          contract: obj.contract,
+        }
+      );
+      if (result.data.success) {
+        Notify("success", result.data.message);
+      } else {
+        Notify("error", result.data.message);
+      }
+      console.log("result", result.data);
+      dispatch(setLoading(false));
+    } catch (error) {
+      dispatch(setLoading(false));
+      console.log("Burn error", error);
     }
   };
 
@@ -141,53 +186,19 @@ const DBridge = (props) => {
       render: (_, obj) => (
         <>
           <Flex gap={5} vertical align="center">
-            {obj.contentType === "image/webp" ||
-            obj.contentType === "image/jpeg" ||
-            obj.contentType === "image/png" ||
-            obj.contentType === "image/svg+xml" ? (
-              <img
-                src={`${CONTENT_API}/content/${obj.id}`}
-                alt={`${obj.id}-borrow_image`}
-                className="border-radius-30"
-                width={70}
-                height={70}
-              />
-            ) : obj.contentType === "image/svg" ||
-              obj.contentType === "text/html;charset=utf-8" ||
-              obj.contentType === "text/html" ? (
-              <iframe
-                loading="lazy"
-                width={"80px"}
-                height={"80px"}
-                style={{ border: "none", borderRadius: "20%" }}
-                src={`${CONTENT_API}/content/${obj.id}`}
-                title="svg"
-                sandbox="allow-scripts"
-              >
-                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                  <image href={`${CONTENT_API}/content/${obj.id}`} />
-                </svg>
-              </iframe>
-            ) : (
-              <img
-                src={`${
-                  obj?.meta?.collection_page_img_url
-                    ? obj?.meta?.collection_page_img_url
-                    : `${process.env.PUBLIC_URL}/collections/${obj?.collectionSymbol}`
-                }`}
-                // NatBoys
-                // src={`https://ipfs.io/ipfs/QmdQboXbkTdwEa2xPkzLsCmXmgzzQg3WCxWFEnSvbnqKJr/1842.png`}
-                // src={`${process.env.PUBLIC_URL}/collections/${obj?.collectionSymbol}.png`}
-                onError={(e) =>
-                  (e.target.src = `${process.env.PUBLIC_URL}/collections/${obj?.collectionSymbol}.png`)
-                }
-                alt={`${obj.id}-borrow_image`}
-                className="border-radius-30"
-                width={70}
-                height={70}
-              />
-            )}
-            {Capitalaize(obj.collectionSymbol)} - #{obj.inscriptionNumber}
+            <img
+              src={obj?.token?.tokenImage}
+              alt={`${obj?.timestamp}-borrow_image`}
+              onError={(e) =>
+                (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
+              }
+              y
+              className="border-radius-30"
+              width={70}
+              height={70}
+            />
+            {Capitalaize(obj?.token?.tokenName) ||
+              Capitalaize(obj?.collection?.collectionName)}
           </Flex>
         </>
       ),
@@ -197,20 +208,22 @@ const DBridge = (props) => {
       title: "APY",
       align: "center",
       dataIndex: "APY",
-      render: (_, obj) => (
-        <Text className={"text-color-one"}>{obj.collection.APY}%</Text>
-      ),
+      render: (_, obj) => {
+        const data = collectionObj[obj?.collection?.slug];
+        return <Text className={"text-color-one"}>{data?.APY}%</Text>;
+      },
     },
     {
       key: "Term",
       title: "Term",
       align: "center",
       dataIndex: "terms",
-      render: (_, obj) => (
-        <Text className={"text-color-one"}>
-          {Number(obj.collection.terms)} Days
-        </Text>
-      ),
+      render: (_, obj) => {
+        const data = collectionObj[obj?.collection?.slug];
+        return (
+          <Text className={"text-color-one"}>{Number(data?.terms)} Days</Text>
+        );
+      },
     },
     {
       key: "LTV",
@@ -220,7 +233,7 @@ const DBridge = (props) => {
       render: (_, obj) => {
         return (
           <Text className={"text-color-one"}>
-            {obj?.loanToValue ? obj.collection.loanToValue : 0}%
+            {obj?.loanToValue ? obj?.collection?.loanToValue : 0}%
           </Text>
         );
       },
@@ -231,9 +244,9 @@ const DBridge = (props) => {
       align: "center",
       dataIndex: "value",
       render: (_, obj) => {
-        const floor = Number(obj.collection.floorPrice)
-          ? Number(obj.collection.floorPrice)
-          : 30000;
+        const floor = Number(obj?.collection?.floorPrice)
+          ? Number(obj?.collection?.floorPrice)
+          : 0.0035;
         return (
           <>
             <Flex vertical align="center">
@@ -277,25 +290,93 @@ const DBridge = (props) => {
       render: (_, obj) => {
         return (
           <Flex gap={5} justify="center">
-            {obj.isToken ? (
+            {obj?.isToken && !obj?.isBorrowRequest && !obj?.inLoan ? (
+              <CustomButton
+                className="click-btn font-weight-600 letter-spacing-small"
+                trigger={"click"}
+                disabled={!obj.isToken}
+                onClick={() => {
+                  handleTokenBurn(obj);
+                }}
+                title={"Burn🔥"}
+              />
+            ) : obj.isBorrowRequest ? (
+              <Text className={"text-color-one font-small"}>Offer created</Text>
+            ) : obj.inLoan ? (
+              <Text className={"text-color-one font-small"}>In Loan</Text>
+            ) : (
+              <Flex gap={5}>
+                <CustomButton
+                  className={"click-btn font-weight-600 letter-spacing-small"}
+                  title={"Mint"}
+                  size="medium"
+                  onClick={() =>
+                    handleTokenMint(obj.token.tokenId, obj.contract)
+                  }
+                  menu={{
+                    items: options,
+                    onClick: () => setSupplyModalItems(obj),
+                  }}
+                />
+              </Flex>
+            )}
+            {/* {obj.isToken ? (
               <Text className={"text-color-one font-small"}>Minted</Text>
             ) : (
               <CustomButton
                 className={"click-btn font-weight-600 letter-spacing-small"}
                 title={"Mint"}
                 size="medium"
-                onClick={() => handleTokenMint(obj.inscriptionNumber)}
+                onClick={() => handleTokenMint(obj.tokenId)}
                 menu={{
                   items: options,
                   onClick: () => setSupplyModalItems(obj),
                 }}
               />
-            )}
+            )} */}
           </Flex>
         );
       },
     },
   ];
+
+  // useEffect(() => {
+  //   (async () => {
+  //     if (activeWallet.length) {
+  //       const options = {
+  //         method: "GET",
+  //         url: `${process.env.REACT_APP_MAGICEDEN_API}/v3/rtp/polygon/users/activity/v6?users=0x864C1509bDd19F36e91Fee9F12473453C856df66&limit=20&sortBy=eventTimestamp&includeMetadata=true`,
+  //         headers: {
+  //           accept: "*/*",
+  //           Authorization: process.env.REACT_APP_MAGICEDEN_BEARER,
+  //         },
+  //       };
+
+  //       const result = await axios.request(options);
+  //       const activities = result.data.activities.filter(
+  //         (activity) => activity.type === "transfer"
+  //       );
+
+  //       const userActivity = activities.filter(
+  //         (activity) =>
+  //           activity.fromAddress.toLowerCase() ===
+  //             "0xe98b997f529f643bc67f217b1270a0f7d7a0ecb2".toLowerCase() &&
+  //           activity.toAddress.toLowerCase() === custodyAddress.toLowerCase()
+  //       );
+  //       const uniqueTokens = userActivity.reduce((map, item) => {
+  //         const { tokenId } = item.token;
+  //         // If tokenId doesn't exist in map or the current item's timestamp is more recent
+  //         if (!map[tokenId] || map[tokenId].timestamp < item.timestamp) {
+  //           map[tokenId] = item; // Update with the more recent entry
+  //         }
+  //         return map;
+  //       }, {});
+  //       console.log(Object.values(uniqueTokens));
+  //       setEthAssets(Object.values(uniqueTokens));
+  //     }
+  //   })();
+  // }, []);
+  console.log("userColl", userCollateral);
 
   return (
     <>
@@ -313,20 +394,10 @@ const DBridge = (props) => {
             <IoInformationCircleSharp size={25} color="#55AD9B" />
             <Text className="font-small text-color-two">
               Your ordinal inscription stored in custody address. Address -
-              <Link
-                to={
-                  "https://ordiscan.com/address/bc1pjj4uzw3svyhezxqq7cvqdxzf48kfhklxuahyx8v8u69uqfmt0udqlhwhwz"
-                }
-                target="_blank"
-              >
-                <Tooltip
-                  className="link"
-                  title="bc1pjj4uzw3svyhezxqq7cvqdxzf48kfhklxuahyx8v8u69uqfmt0udqlhwhwz"
-                >
+              <Link to={`https://opensea.io/AbishekJ`} target="_blank">
+                <Tooltip className="link" title={custodyAddress}>
                   {" "}
-                  {sliceAddress(
-                    "bc1pjj4uzw3svyhezxqq7cvqdxzf48kfhklxuahyx8v8u69uqfmt0udqlhwhwz"
-                  )}
+                  {sliceAddress(custodyAddress)}
                 </Tooltip>
                 .
               </Link>{" "}
@@ -341,7 +412,7 @@ const DBridge = (props) => {
                   size={15}
                 />{" "}
               </Tooltip>
-              Ordinals sent will reflect here in 15 minutes.{" "}
+              Tokens sent will reflect here in 5minutes after they supplied.{" "}
             </Text>
           </Flex>
         </Col>
@@ -367,64 +438,51 @@ const DBridge = (props) => {
         )}
       </Row>
 
-      {walletState.active.includes(UNISAT_WALLET_KEY) ||
-      walletState.active.includes(MAGICEDEN_WALLET_KEY) ? (
-        <Row
-          justify={"space-between"}
-          className="mt-20 pad-bottom-30"
-          gutter={32}
-        >
-          <Col xl={24}>
-            <Row className="m-bottom">
-              <Col xl={24}>
-                <TableComponent
-                  locale={{
-                    emptyText: (
-                      <Flex align="center" justify="center" gap={5}>
-                        {!xverseAddress &&
-                        !unisatAddress &&
-                        !magicEdenAddress ? (
-                          <>
-                            <FaRegSmileWink size={25} />
-                            <span className="font-medium">
-                              Connect any BTC Wallet !
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <ImSad size={25} />
-                            <span className="font-medium">
-                              Seems you have no assets!
-                            </span>
-                          </>
-                        )}
-                      </Flex>
-                    ),
-                  }}
-                  loading={{
-                    spinning: userCollateral === null,
-                    indicator: <Bars />,
-                  }}
-                  pagination={{ pageSize: 5 }}
-                  rowKey={(e) =>
-                    `${e?.id}-${
-                      e?.inscriptionNumber
-                    }-${Math.random()}-${Date.now()}`
-                  }
-                  tableColumns={AssetsToSupplyTableColumns}
-                  tableData={userCollateral}
-                />
-              </Col>
-            </Row>
-          </Col>
-        </Row>
-      ) : (
-        <WalletConnectDisplay
-          heading={"Please connect any BTC wallets"}
-          message={"Connect your wallet to see your assets!"}
-          isPlugError={isPlugError}
-        />
-      )}
+      <Row
+        justify={"space-between"}
+        className="mt-20 pad-bottom-30"
+        gutter={32}
+      >
+        <Col xl={24}>
+          <Row className="m-bottom">
+            <Col xl={24}>
+              <TableComponent
+                locale={{
+                  emptyText: (
+                    <Flex align="center" justify="center" gap={5}>
+                      {!metaAddress ? (
+                        <>
+                          <FaRegSmileWink size={25} />
+                          <span className="font-medium">
+                            Connect any BTC Wallet !
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <ImSad size={25} />
+                          <span className="font-medium">
+                            Seems you have no assets!
+                          </span>
+                        </>
+                      )}
+                    </Flex>
+                  ),
+                }}
+                // loading={
+                //   {
+                //     // spinning: userCollateral === null,
+                //     // indicator: <Bars />,
+                //   }
+                // }
+                pagination={{ pageSize: 5 }}
+                rowKey={(e) => `${e?.token?.tokenId}-${e?.timestamp}`}
+                tableColumns={AssetsToSupplyTableColumns}
+                tableData={userCollateral}
+              />
+            </Col>
+          </Row>
+        </Col>
+      </Row>
 
       {/* MODAL START */}
       {/* Asset Details Modal */}

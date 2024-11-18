@@ -1,53 +1,5 @@
 [
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "requestId",
-        "type": "uint256"
-      }
-    ],
-    "name": "acceptBorrowRequest",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "nftContract",
-        "type": "address"
-      }
-    ],
-    "name": "approveNFT",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      }
-    ],
-    "name": "OwnableInvalidOwner",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
-    ],
-    "name": "OwnableUnauthorizedAccount",
-    "type": "error"
-  },
-  {
     "anonymous": false,
     "inputs": [
       {
@@ -165,98 +117,6 @@
     "type": "event"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "nftContract",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "collectionId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "duration",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "loanAmount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "repayAmount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "platformFee",
-        "type": "uint256"
-      }
-    ],
-    "name": "createBorrowRequest",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "requestId",
-        "type": "uint256"
-      }
-    ],
-    "name": "forceReturnNFT",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "nftContract",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "forcloseLoan",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "nftContract",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "loanRepayment",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
     "anonymous": false,
     "inputs": [
       {
@@ -325,40 +185,6 @@
     "type": "event"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "name": "onERC721Received",
-    "outputs": [
-      {
-        "internalType": "bytes4",
-        "name": "",
-        "type": "bytes4"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "anonymous": false,
     "inputs": [
       {
@@ -378,13 +204,6 @@
     "type": "event"
   },
   {
-    "inputs": [],
-    "name": "renounceOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -392,20 +211,20 @@
         "type": "uint256"
       }
     ],
-    "name": "transferCheck",
+    "name": "acceptBorrowRequest",
     "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
     "inputs": [
       {
         "internalType": "address",
-        "name": "newOwner",
+        "name": "nftContract",
         "type": "address"
       }
     ],
-    "name": "transferOwnership",
+    "name": "approveNFT",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -431,9 +250,9 @@
         "type": "address"
       },
       {
-        "internalType": "uint256",
-        "name": "collectionId",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "tokenAddress",
+        "type": "address"
       },
       {
         "internalType": "uint256",
@@ -480,6 +299,80 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "nftContract",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "duration",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "loanAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "repayAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "platformFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "createBorrowRequest",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "requestId",
+        "type": "uint256"
+      }
+    ],
+    "name": "forceReturnNFT",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "nftContract",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "forcloseLoan",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "getActiveBorrowRequests",
     "outputs": [
@@ -496,9 +389,9 @@
             "type": "address"
           },
           {
-            "internalType": "uint256",
-            "name": "collectionId",
-            "type": "uint256"
+            "internalType": "address",
+            "name": "tokenAddress",
+            "type": "address"
           },
           {
             "internalType": "uint256",
@@ -541,7 +434,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct BorrowRequestContract.BorrowRequest[]",
+        "internalType": "struct LendingLedger.BorrowRequest[]",
         "name": "",
         "type": "tuple[]"
       }
@@ -602,7 +495,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct BorrowRequestContract.Lending[]",
+        "internalType": "struct LendingLedger.Lending[]",
         "name": "",
         "type": "tuple[]"
       }
@@ -663,7 +556,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct BorrowRequestContract.Lending[]",
+        "internalType": "struct LendingLedger.Lending[]",
         "name": "",
         "type": "tuple[]"
       }
@@ -699,9 +592,9 @@
             "type": "address"
           },
           {
-            "internalType": "uint256",
-            "name": "collectionId",
-            "type": "uint256"
+            "internalType": "address",
+            "name": "tokenAddress",
+            "type": "address"
           },
           {
             "internalType": "uint256",
@@ -744,7 +637,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct BorrowRequestContract.BorrowRequest",
+        "internalType": "struct LendingLedger.BorrowRequest",
         "name": "",
         "type": "tuple"
       }
@@ -780,9 +673,9 @@
             "type": "address"
           },
           {
-            "internalType": "uint256",
-            "name": "collectionId",
-            "type": "uint256"
+            "internalType": "address",
+            "name": "tokenAddress",
+            "type": "address"
           },
           {
             "internalType": "uint256",
@@ -825,7 +718,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct BorrowRequestContract.BorrowRequest",
+        "internalType": "struct LendingLedger.BorrowRequest",
         "name": "",
         "type": "tuple"
       }
@@ -856,9 +749,9 @@
             "type": "address"
           },
           {
-            "internalType": "uint256",
-            "name": "collectionId",
-            "type": "uint256"
+            "internalType": "address",
+            "name": "tokenAddress",
+            "type": "address"
           },
           {
             "internalType": "uint256",
@@ -901,7 +794,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct BorrowRequestContract.BorrowRequest[]",
+        "internalType": "struct LendingLedger.BorrowRequest[]",
         "name": "",
         "type": "tuple[]"
       }
@@ -969,6 +862,58 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "nftContract",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "loanRepayment",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "name": "onERC721Received",
+    "outputs": [
+      {
+        "internalType": "bytes4",
+        "name": "",
+        "type": "bytes4"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "owner",
     "outputs": [
@@ -979,6 +924,39 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "requestId",
+        "type": "uint256"
+      }
+    ],
+    "name": "transferCheck",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ]

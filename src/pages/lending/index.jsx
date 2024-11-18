@@ -72,7 +72,7 @@ const Lending = (props) => {
                 width={"75px"}
                 height={"75px"}
                 alt={"collection_images"}
-                src={obj?.image_url}
+                src={obj?.image}
                 onError={(e) =>
                   (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
                 }
@@ -161,7 +161,9 @@ const Lending = (props) => {
       dataIndex: "floor",
       render: (_, obj) => {
         const data = calculateOrdinalInCrypto(
-          Number(obj.floorPrice) ? Number(obj.floorPrice) : 30000,
+          Number(obj?.floorAsk?.price?.amount?.decimal)
+            ? Number(obj?.floorAsk?.price?.amount?.decimal)
+            : 0.0035,
           ethvalue,
           coinValue
         );
@@ -202,14 +204,14 @@ const Lending = (props) => {
     try {
       if (allBorrowRequest !== null) {
         const collectionBorrowRequests = allBorrowRequest.filter(
-          (req) => Number(req.collectionId) === Number(obj.collectionID)
+          (req) => req.tokenAddress === obj.id
         );
 
         dispatch(setOffers(collectionBorrowRequests));
         toggleOfferModal();
         setOfferModalData({
           ...obj,
-          thumbnailURI: obj.thumbnailURI,
+          thumbnailURI: obj.image,
           collectionName: obj.name,
         });
       } else {
@@ -256,7 +258,7 @@ const Lending = (props) => {
                 indicator: <Bars />,
               }}
               pagination={false}
-              rowKey={(e) => `${Number(e?.collectionID)}-${e?.collectionName}`}
+              rowKey={(e) => `${e?.id}-${e?.name}`}
               tableData={approvedCollections[0] ? approvedCollections : []}
               tableColumns={approvedCollectionColumns}
             />

@@ -45,13 +45,12 @@ const Borrowing = (props) => {
   const activeWallet = reduxState.wallet.active;
   const borrowCollateral = reduxState.constant.borrowCollateral;
   const allBorrowRequest = reduxState.constant.allBorrowRequest;
+  // console.log("borrowCollateral", borrowCollateral);
 
   const metaAddress = reduxState.wallet.meta.address;
 
   const ethvalue = reduxState.constant.ethvalue;
   const coinValue = reduxState.constant.coinValue;
-
-  const CONTENT_API = process.env.REACT_APP_ORDINALS_CONTENT_API;
 
   const { Text } = Typography;
 
@@ -61,12 +60,14 @@ const Borrowing = (props) => {
   const [collateralData, setCollateralData] = useState(null);
   const [offerModalData, setOfferModalData] = useState({});
   const [isOffersModal, setIsOffersModal] = useState(false);
+  console.log("collateralData", collateralData);
 
   const [isLendModal, setIsLendModal] = useState(false);
   const [lendModalData, setLendModalData] = useState({});
 
   const [isBorrowModal, setIsBorrowModal] = useState(false);
   const [borrowModalData, setBorrowModalData] = useState({});
+  console.log("borrowModalData", borrowModalData);
 
   const [collapseActiveKey, setCollapseActiveKey] = useState(["2"]);
   const [isRequestBtnLoading, setIsRequestBtnLoading] = useState(false);
@@ -123,7 +124,7 @@ const Borrowing = (props) => {
                 width={"75px"}
                 height={"75px"}
                 alt={"collection_images"}
-                src={obj?.image_url}
+                src={obj?.image}
                 onError={(e) =>
                   (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
                 }
@@ -212,7 +213,9 @@ const Borrowing = (props) => {
       dataIndex: "floor",
       render: (_, obj) => {
         const data = calculateOrdinalInCrypto(
-          Number(obj.floorPrice) ? Number(obj.floorPrice) : 30000,
+          Number(obj?.floorAsk?.price?.amount?.decimal)
+            ? Number(obj?.floorAsk?.price?.amount?.decimal)
+            : 0.0035,
           ethvalue,
           coinValue
         );
@@ -246,9 +249,9 @@ const Borrowing = (props) => {
                 return;
               }
               // Floor
-              const floor = Number(obj.floorPrice)
-                ? Number(obj.floorPrice)
-                : 30000;
+              const floor = Number(obj?.floorAsk?.price?.amount?.decimal)
+                ? Number(obj?.floorAsk?.price?.amount?.decimal)
+                : 0.0035;
               const floorPrice = calculateOrdinalInCrypto(
                 floor,
                 ethvalue,
@@ -257,7 +260,7 @@ const Borrowing = (props) => {
 
               // Assets
               let assets = collateralData?.filter(
-                (p) => p.collectionSymbol === obj.symbol
+                (p) => p.collection.name === obj.name
               );
               // Terms
               const term = Number(obj.terms);
@@ -270,7 +273,7 @@ const Borrowing = (props) => {
               // Calc 85% to display close to floor price message
               const exceedRange = ((maxQuoted * 85) / 100).toFixed(6);
               // Calc interest per day
-              const interestPerDay = calculateDailyInterestRate(obj.yield);
+              const interestPerDay = calculateDailyInterestRate(obj.terms);
               // Calc interest for given no of days
               const interestTerm = Number(interestPerDay) * term;
               // Calc interest for n days
@@ -284,7 +287,7 @@ const Borrowing = (props) => {
               }, 300);
               setBorrowModalData({
                 ...obj,
-                assets,
+                assets: assets ? assets : [],
                 amount,
                 interest,
                 maxQuoted,
@@ -353,7 +356,7 @@ const Borrowing = (props) => {
         return new Promise(async (res) => {
           const result = await borrowContract.getBorrowRequestByTokenId(
             TokenContractAddress,
-            asset.inscriptionNumber
+            asset.tokenId
           );
           res({
             ...asset,
@@ -409,8 +412,8 @@ const Borrowing = (props) => {
 
           const requestResult = await borrowContract.createBorrowRequest(
             TokenContractAddress,
-            Number(borrowModalData.collectionID),
-            borrowModalData.collateral.inscriptionNumber,
+            borrowModalData.collateral.contract,
+            borrowModalData.collateral.tokenId,
             borrowModalData.terms,
             Wei_loanAmount,
             Wei_repayAmount,
@@ -556,7 +559,7 @@ const Borrowing = (props) => {
               indicator: <Bars />,
             }}
             pagination={false}
-            rowKey={(e) => `${Number(e?.collectionID)}-${e?.collectionName}`}
+            rowKey={(e) => `${e?.id}-${e?.name}`}
             tableData={approvedCollections[0] ? approvedCollections : []}
             tableColumns={approvedCollectionColumns}
           />
@@ -602,13 +605,14 @@ const Borrowing = (props) => {
         <Row justify={"space-between"} className="mt-15">
           <Col md={3}>
             <img
-              className="border-radius-5"
-              alt={`lend_image`}
-              src={borrowModalData.collectionURI}
+              className="border-radius-5 loan-cards"
+              width={"75px"}
+              height={"75px"}
+              alt={"collection_images"}
+              src={borrowModalData?.image}
               onError={(e) =>
-                (e.target.src = `${process.env.PUBLIC_URL}/collections/${borrowModalData.symbol}.png`)
+                (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
               }
-              width={80}
             />
           </Col>
 
@@ -843,12 +847,12 @@ const Borrowing = (props) => {
           {borrowModalData?.assets?.length ? (
             <>
               {borrowModalData.assets?.map((asset) => {
-                const { canisterId, tokenId, id } = asset;
+                const { contract, tokenId, id } = asset;
                 return (
                   <Col
                     md={6}
                     className="p-relative"
-                    key={`${canisterId}-${tokenId}`}
+                    key={`${contract}-${tokenId}`}
                   >
                     <div
                       onClick={() =>
@@ -858,7 +862,7 @@ const Borrowing = (props) => {
                         }))
                       }
                       className={`selection-css pointer ${
-                        id === borrowModalData?.collateral?.id
+                        tokenId === borrowModalData?.collateral?.tokenId
                           ? true
                             ? "selected-dark card-selected"
                             : "selected-light card-selected light-color-primary"
@@ -867,7 +871,7 @@ const Borrowing = (props) => {
                           : "card-unselected light-color-primary"
                       }`}
                     >
-                      {id === borrowModalData?.collateral?.id
+                      {tokenId === borrowModalData?.collateral?.tokenId
                         ? "Selected"
                         : "Select"}
                     </div>
@@ -888,58 +892,23 @@ const Borrowing = (props) => {
                           : ""
                       } pointer`}
                       cover={
-                        asset.contentType === "image/webp" ||
-                        "image/jpeg" ||
-                        "image/png" ? (
-                          <img
-                            alt="asset_img"
-                            src={`${CONTENT_API}/content/${asset.id}`}
-                          />
-                        ) : asset.contentType.includes("image/svg") ? (
-                          <iframe
-                            loading="lazy"
-                            width={"50%"}
-                            height={"80px"}
-                            style={{ border: "none", borderRadius: "20%" }}
-                            src={`${CONTENT_API}/content/${asset.id}`}
-                            title="svg"
-                            sandbox="allow-scripts"
-                          >
-                            <svg
-                              viewBox="0 0 100 100"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <image
-                                href={asset.contentURI}
-                                width={"50%"}
-                                height={"80px"}
-                              />
-                            </svg>
-                          </iframe>
-                        ) : (
-                          <img
-                            src={`${
-                              asset?.meta?.collection_page_img_url
-                                ? asset?.meta?.collection_page_img_url
-                                : `${process.env.PUBLIC_URL}/collections/${asset?.symbol}`
-                            }`}
-                            // NatBoys
-                            // src={`https://ipfs.io/ipfs/QmdQboXbkTdwEa2xPkzLsCmXmgzzQg3WCxWFEnSvbnqKJr/1842.png`}
-                            // src={`${process.env.PUBLIC_URL}/collections/${obj?.symbol}.png`}
-                            onError={(e) =>
-                              (e.target.src = `${process.env.PUBLIC_URL}/collections/${asset?.symbol}.png`)
-                            }
-                            alt={`${asset.id}-borrow_image`}
-                            width={70}
-                          />
-                        )
+                        <img
+                          className="border-radius-5 loan-cards"
+                          width={"50px"}
+                          height={"110px"}
+                          alt={"collection_images"}
+                          src={asset?.image}
+                          onError={(e) =>
+                            (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
+                          }
+                        />
                       }
                     >
                       <Flex justify="center">
                         <span
                           className={`font-xsmall text-color-two letter-spacing-small`}
                         >
-                          #{asset.inscriptionNumber}{" "}
+                          #{asset.tokenId}{" "}
                         </span>
                       </Flex>
                     </CardDisplay>
@@ -1009,20 +978,16 @@ const Borrowing = (props) => {
                 if (LTV <= 100) {
                   const amount = (
                     (LTV / 100) *
-                    Number(borrowModalData.ordinalPrice)
+                    borrowModalData.floorPrice
                   ).toFixed(6);
 
-                  const interest = (
-                    Number(amount) * borrowModalData.interestTerm
-                  ).toFixed(6);
-
-                  const platformFee = ((interest * 15) / 100).toFixed(6);
+                  const { interest, platformFee } = calcLendData(amount);
 
                   setBorrowModalData({
                     ...borrowModalData,
+                    amount: Number(amount),
                     sliderLTV: LTV,
                     platformFee,
-                    amount: Number(amount),
                     interest,
                   });
                 }

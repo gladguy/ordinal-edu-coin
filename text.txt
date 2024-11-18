@@ -1,0 +1,120 @@
+        try {
+          await window.ethereum.request({ method: "eth_requestAccounts" });
+          const accounts = await web3.eth.getAccounts();
+          const networkId = await web3.eth.net.getId();
+
+          if (Number(networkId) !== chainId) {
+            Notify("error", "Switch to the EDU open campus network!");
+            try {
+              await window.ethereum.request({
+                method: "wallet_switchEthereumChain",
+                params: [{ chainId }],
+              });
+            } catch (switchError) {
+              if (switchError.code === 4902) {
+                // This error code indicates that the chain has not been added to MetaMask.
+                try {
+                  await window.ethereum.request({
+                    method: "wallet_addEthereumChain",
+                    params: [
+                      {
+                        chainId: "0xA045C",
+                        chainName: "Open Campus Codex",
+                        rpcUrls: [
+                          "https://rpc.open-campus-codex.gelato.digital/",
+                        ],
+                        blockExplorerUrls: [
+                          "https://opencampus-codex.blockscout.com/",
+                        ],
+                        nativeCurrency: {
+                          name: "EDU Token",
+                          symbol: "EDU", // Replace with the symbol of the native token
+                          decimals: 18,
+                        },
+                      },
+                    ],
+                  });
+                } catch (addError) {
+                  console.error("Failed to add the network:", addError);
+                }
+              } else {
+                console.error("Failed to switch the network:", switchError);
+              }
+            }
+          }
+          setWalletConnection({
+            ...walletConnection,
+            [META_WALLET_KEY]: {
+              address: accounts[0],
+              publicKey: null,
+            },
+          });
+          setActiveConnections([...activeConnections, META_WALLET_KEY]);
+          setActiveAddresses({
+            ...activeAddresses,
+            [META_WALLET_KEY]: accounts[0],
+          });
+        } catch (error) {
+          console.error("User denied account access", error);
+        }
+
+        ----------------------------------------------------------------------------------------------
+
+                try {
+          await window.ethereum.request({ method: "eth_requestAccounts" });
+          const accounts = await web3.eth.getAccounts();
+          const networkId = await web3.eth.net.getId();
+          console.log("networkId", networkId, "chainId", chainId);
+
+          if (Number(networkId) !== chainId) {
+            Notify("error", "Switch to the ETH network!");
+            try {
+              await window.ethereum.request({
+                method: "wallet_switchEthereumChain",
+                params: [{ chainId }],
+              });
+            } catch (switchError) {
+              if (switchError.code === 4902) {
+                // This error code indicates that the chain has not been added to MetaMask.
+                try {
+                  await window.ethereum.request({
+                    method: "wallet_addEthereumChain",
+                    params: [
+                      {
+                        chainId: "0x1",
+                        chainName: "Ethereum Mainnet",
+                        rpcUrls: ["https://api.mycryptoapi.com/eth"],
+                        blockExplorerUrls: ["https://etherscan.io/"],
+                        nativeCurrency: {
+                          name: "ETH",
+                          symbol: "Ether", // Replace with the symbol of the native token
+                          decimals: 18,
+                        },
+                      },
+                    ],
+                  });
+                } catch (addError) {
+                  console.error("Failed to add the network:", addError);
+                }
+              } else {
+                console.error("Failed to switch the network:", switchError);
+              }
+            }
+          }
+          if (Number(networkId) === chainId) {
+            setWalletConnection({
+              ...walletConnection,
+              [META_WALLET_KEY]: {
+                address: accounts[0],
+                publicKey: null,
+              },
+            });
+            setActiveConnections([...activeConnections, META_WALLET_KEY]);
+            setActiveAddresses({
+              ...activeAddresses,
+              [META_WALLET_KEY]: accounts[0],
+            });
+          }
+        } catch (error) {
+          console.error("User denied account access", error);
+        }

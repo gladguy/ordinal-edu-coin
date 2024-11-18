@@ -2,16 +2,6 @@ import { createSlice } from "@reduxjs/toolkit";
 import { MAGICEDEN_WALLET_KEY, META_WALLET_KEY, UNISAT_WALLET_KEY } from "../../utils/common";
 
 const state = {
-  magicEden: {
-    ordinals: {},
-    payment: {},
-    btcBalance: 0.0,
-  },
-  unisat: {
-    address: null,
-    publicKey: null,
-    btcBalance: 0.0,
-  },
   meta: {
     address: null,
     publicKey: null

@@ -1,12 +1,11 @@
-import { Col, Flex, Grid, Row, Skeleton, Tooltip, Typography } from "antd";
+import { Col, Flex, Grid, Row, Tooltip, Typography } from "antd";
+import { motion } from "framer-motion";
 import gsap from "gsap";
 import React, { useEffect, useState } from "react";
+import { SpinningCircles } from "react-loading-icons";
 import bitcoin from "../../assets/coin_logo/edu_coin.png";
 import CardDisplay from "../../component/card";
 import { propsContainer } from "../../container/props-container";
-import axios from "axios";
-import { SpinningCircles } from "react-loading-icons";
-import { motion } from "framer-motion";
 
 const Home = (props) => {
   const { reduxState } = props.redux;
@@ -18,11 +17,8 @@ const Home = (props) => {
   const { useBreakpoint } = Grid;
   const breakpoints = useBreakpoint();
 
-  const [allCollectionList, setAllCollectionList] = useState([]);
   const [collectionList, setCollectionList] = useState([]);
   const [isFetching, setIsFetching] = useState(false);
-
-  const BTC_ZERO = process.env.REACT_APP_BTC_ZERO;
 
   const container = {
     hidden: { opacity: 0, scale: 0 },
@@ -60,35 +56,15 @@ const Home = (props) => {
     },
   });
 
-  const fetchCollections = async () => {
-    setIsFetching(true);
-
-    const price = collections.map((collection) => {
-      return new Promise(async (res) => {
-        const result = await axios.get(
-          `${process.env.REACT_APP_OPENSEA_API}/api/v2/collections/${collection.collection}/stats`,
-          {
-            headers: {
-              "x-api-key": process.env.REACT_APP_OPENSEA_APIKEY,
-            },
-          }
-        );
-        res({ ...collection, price: result.data.total });
-      });
-    });
-    const revealedPromise = await Promise.all(price);
-
-    setIsFetching(false);
-    setAllCollectionList(revealedPromise);
-    setCollectionList([...collectionList, ...revealedPromise.slice(0, 9)]);
-  };
-
   useEffect(() => {
     if (collections[0]) {
-      fetchCollections();
+      setIsFetching(false);
+      setCollectionList(collections.slice(0, 9));
+    } else {
+      setIsFetching(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // console.log("col", collectionList);
 
   return (
     <React.Fragment>
@@ -117,13 +93,16 @@ const Home = (props) => {
                 modifiedName = modifiedName + " " + word;
               }
             });
-            const floor = collection?.price.floor_price
-              ? collection?.price.floor_price
+            const floor = collection?.floorAsk?.price?.amount?.decimal
+              ? collection?.floorAsk?.price?.amount?.decimal
+              : 0.0035;
+            const volume = collection?.volume?.allTime
+              ? collection?.volume?.allTime
               : 30000;
 
             return (
               <Col
-                key={`${collection?.collection}-${index}`}
+                key={`${collection?.id}-${index}`}
                 lg={8}
                 md={12}
                 sm={12}
@@ -169,11 +148,10 @@ const Home = (props) => {
                             width={"90px"}
                             height={"75dvw"}
                             alt={name}
-                            src={collection?.image_url}
+                            src={collection?.image}
                             onError={(e) =>
                               (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
                             }
-                            // src={`${process.env.PUBLIC_URL}/collections/${collection?.symbol}.png`}
                           />
                         </Row>
                       </motion.li>
@@ -203,7 +181,7 @@ const Home = (props) => {
                               className="font-medium text-color-two"
                             >
                               <img src={bitcoin} alt="noimage" width={20} />
-                              {((floor * ethvalue) / coinValue).toFixed(2)}
+                              {floor}
                             </Flex>
                           </div>
 
@@ -224,10 +202,7 @@ const Home = (props) => {
                                 width={20}
                                 height={22}
                               />
-                              {(
-                                (collection?.price.volume * ethvalue) /
-                                coinValue
-                              ).toFixed(2)}
+                              {Math.round((volume * ethvalue) / coinValue)}
                             </Flex>
                           </div>
                         </div>
@@ -245,14 +220,12 @@ const Home = (props) => {
         <Col>
           <Text
             className="font-large pointer text-color-four"
-            onClick={
-              () =>
-                setCollectionList(
-                  collectionList.length > 10
-                    ? allCollectionList.slice(0, 9)
-                    : allCollectionList
-                )
-              // fetchCollections()
+            onClick={() =>
+              setCollectionList(
+                collectionList.length > 10
+                  ? collections.slice(0, 9)
+                  : collections
+              )
             }
           >
             {isFetching ? (

@@ -20,10 +20,11 @@ const state = {
   LendRequests: null,
   userAssets: null,
   userCollateral: null,
-  borrowCollateral: null,
+  borrowCollateral: [],
   allBorrowRequest: null,
   isPlugError: false,
   approvedCollections: ["", "", "", "", "", "", "", "", "", "", "", ""],
+  approvedCollectionsObj: {},
   maxOffers: {},
   offers: null,
   userOffers: null,
@@ -48,6 +49,10 @@ const constantSlice = createSlice({
 
     setApprovedCollection: (state, action) => {
       state.approvedCollections = action.payload;
+    },
+
+    setApprovedCollectionObj: (state, action) => {
+      state.approvedCollectionsObj = action.payload;
     },
 
     setEthValue: (state, action) => {
@@ -163,6 +168,7 @@ export const {
   setAllBorrowRequest,
   setBorrowCollateral,
   setUserBridgeOrdinal,
+  setApprovedCollectionObj,
   setLendRequests,
   setCkBtcAgent,
   setCoinValue,
