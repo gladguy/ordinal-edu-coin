@@ -31,20 +31,15 @@ import {
   clearStates,
   setLendHeader,
   setLoading,
+  setUserCollateral,
 } from "../../redux/slice/constant";
-import {
-  clearWalletState,
-  setMagicEdenCredentials,
-  setMetaCredentials,
-  setUnisatCredentials,
-} from "../../redux/slice/wallet";
+import { clearWalletState, setMetaCredentials } from "../../redux/slice/wallet";
 import {
   chainId,
-  MAGICEDEN_WALLET_KEY,
   META_WALLET_KEY,
+  openCampusNetworkMainnetParams,
   paymentWallets,
   sliceAddress,
-  UNISAT_WALLET_KEY,
 } from "../../utils/common";
 import { propsContainer } from "../props-container";
 
@@ -68,9 +63,6 @@ const Nav = (props) => {
     height: window.screen.height,
   });
   const [current, setCurrent] = useState();
-  const [activeConnections, setActiveConnections] = useState([]);
-  const [walletConnection, setWalletConnection] = useState({});
-  const [activeAddresses, setActiveAddresses] = useState({});
 
   const avatar = process.env.REACT_APP_AVATAR;
 
@@ -192,46 +184,33 @@ const Nav = (props) => {
     setOpen(false);
   };
 
-  const connectWallet = async (walletName) => {
+  const connectWallet = async () => {
     // Meta wallet
     if (window.ethereum) {
       const web3 = new Web3(window.ethereum);
       try {
+        let isSwitched = false;
         await window.ethereum.request({ method: "eth_requestAccounts" });
         const accounts = await web3.eth.getAccounts();
         const networkId = await web3.eth.net.getId();
 
         if (Number(networkId) !== chainId) {
-          Notify("error", "Switch to the EDU open campus network!");
+          Notify("info", "Switching to the EDU open campus network!");
           try {
             await window.ethereum.request({
               method: "wallet_switchEthereumChain",
-              params: [{ chainId }],
+              params: [{ chainId: openCampusNetworkMainnetParams.chainId }],
             });
+            isSwitched = true;
           } catch (switchError) {
             if (switchError.code === 4902) {
               // This error code indicates that the chain has not been added to MetaMask.
               try {
                 await window.ethereum.request({
                   method: "wallet_addEthereumChain",
-                  params: [
-                    {
-                      chainId: "0xA045C",
-                      chainName: "Open Campus Codex",
-                      rpcUrls: [
-                        "https://rpc.open-campus-codex.gelato.digital/",
-                      ],
-                      blockExplorerUrls: [
-                        "https://opencampus-codex.blockscout.com/",
-                      ],
-                      nativeCurrency: {
-                        name: "EDU Token",
-                        symbol: "EDU", // Replace with the symbol of the native token
-                        decimals: 18,
-                      },
-                    },
-                  ],
+                  params: [openCampusNetworkMainnetParams],
                 });
+                isSwitched = true;
               } catch (addError) {
                 console.error("Failed to add the network:", addError);
               }
@@ -239,22 +218,26 @@ const Nav = (props) => {
               console.error("Failed to switch the network:", switchError);
             }
           }
+        } else {
+          isSwitched = true;
         }
-        dispatch(
-          setMetaCredentials({
-            address: accounts[0],
-            publicKey: null,
-          })
-        );
-        Notify("success", "Wallet connection success!");
-        collapseConnectedModal();
+        if (isSwitched) {
+          dispatch(
+            setMetaCredentials({
+              address: accounts[0],
+              publicKey: null,
+            })
+          );
+          Notify("success", "Wallet connection success!");
+          collapseConnectedModal();
+        } else {
+          Notify("error", "Wallet switching failed!");
+        }
         dispatch(setLoading(false));
       } catch (error) {
         console.error("User denied account access", error);
       }
     } else if (window.web3) {
-      console.log("INSIDE ELSE IF");
-
       // Legacy dapp browsers...
       // const web3 = new Web3(window.web3.currentProvider);
     } else {
@@ -265,16 +248,6 @@ const Nav = (props) => {
     }
   };
 
-  const storeWallets = (wallet) => {
-    if (META_WALLET_KEY === wallet) {
-      dispatch(setMetaCredentials(walletConnection[META_WALLET_KEY]));
-    } else if (UNISAT_WALLET_KEY === wallet) {
-      dispatch(setUnisatCredentials(walletConnection[UNISAT_WALLET_KEY]));
-    } else {
-      dispatch(setMagicEdenCredentials(walletConnection[MAGICEDEN_WALLET_KEY]));
-    }
-  };
-
   const showDrawer = () => {
     setOpen(true);
   };
@@ -282,28 +255,10 @@ const Nav = (props) => {
     setOpen(false);
   };
 
-  const isDisabled = (key) => {
-    const connected = activeConnections.includes(key);
-    if (connected) return "card-disabled";
-    const cond = (bool) => (bool ? "card-disabled" : "");
-    switch (key) {
-      case UNISAT_WALLET_KEY: {
-        return cond(activeConnections.includes(MAGICEDEN_WALLET_KEY));
-      }
-      case MAGICEDEN_WALLET_KEY: {
-        return cond(activeConnections.includes(UNISAT_WALLET_KEY));
-      }
-      default:
-        return "";
-    }
-  };
-
   const walletCards = (wallet, index) => (
     <CardDisplay
       key={`${wallet.label}-${index + 1 * 123}`}
-      className={`modalCardBg card-hover width pointer grey-bg m-top-bottom ${isDisabled(
-        wallet.key
-      )}`}
+      className={`modalCardBg card-hover width pointer grey-bg m-top-bottom`}
       hoverable={true}
       onClick={() => {
         connectWallet(wallet.key);
@@ -673,11 +628,8 @@ const Nav = (props) => {
         footer={""}
         onCancel={() => {
           collapseConnectedModal();
-          setWalletConnection({});
-          setActiveConnections([]);
-          setActiveAddresses({});
         }}
-        width={breakPoint.xs ? "100%" : "35%"}
+        width={breakPoint.xs ? "100%" : "30%"}
       >
         <Row justify={"start"} align={"middle"}>
           <Text
@@ -694,45 +646,15 @@ const Nav = (props) => {
           </Text>
         </Row>
 
-        {/* <Row justify={"start"} align={"middle"}>
-            <Text className={`font-small text-color-two biticon mt-15`}>
-              Choose how you want to connect. If you don't have a wallet, you
-              can select a provider and create one.
-            </Text>
-          </Row> */}
-
         <Row justify={"start"} align={"middle"}>
           <Text className={`font-small text-color-two biticon mt-15`}>
-            Connect the Meta wallet for payments and connect any one BTC wallet
-            for lending and borrowing.
-          </Text>
-        </Row>
-
-        <Row justify={"start"} align={"middle"}>
-          <Text className={`font-small text-color-two biticon mt-15`}>
-            Note: Connect one wallet from each category.
+            Connect the Meta wallet for payments, lending and borrowing.
           </Text>
         </Row>
 
         <Row justify={"center"}>
           <Divider />
         </Row>
-
-        {Object.entries(activeAddresses).map((wallet) => {
-          const [walletName, address] = wallet;
-          return (
-            <Row>
-              <Flex gap={15}>
-                <Text className="text-color-one font-medium">
-                  {walletName === "meta" ? "Payment" : "Ordinals"} {"-->"}
-                </Text>
-                <Text className="text-color-four font-small">
-                  {sliceAddress(address, 9)} {addressRendererWithCopy(address)}
-                </Text>
-              </Flex>
-            </Row>
-          );
-        })}
 
         <Row>
           <Col xs={24}>
@@ -770,55 +692,6 @@ const Nav = (props) => {
                     </>
                   ),
                 },
-                // {
-                //   key: "2",
-                //   label: (
-                //     <Row align={"middle"}>
-                //       <img
-                //         src={Bitcoin}
-                //         alt="noimage"
-                //         style={{ paddingRight: "10px" }}
-                //         width={25}
-                //       />
-                //       <Text className="font-weight-600 letter-spacing-medium text-color-one font-large">
-                //         {" "}
-                //         BTC
-                //       </Text>
-                //     </Row>
-                //   ),
-                //   children: (
-                //     <>
-                //       {BTCWallets.map((wallet, index) => {
-                //         return (
-                //           <Row key={`index-${wallet.key}`}>
-                //             {walletCards(wallet, index)}
-                //           </Row>
-                //         );
-                //       })}
-                //     </>
-                //   ),
-                // },
-                // {
-                //   key: "3",
-                //   label: (
-                //     <>
-                //       {activeConnections.length === 2 ? (
-                //         <Row align={"middle"}>
-                //           <CustomButton
-                //             block
-                //             title={"Sign in"}
-                //             onClick={handleConnectionFinish}
-                //             className={
-                //               "click-btn font-weight-600 letter-spacing-small"
-                //             }
-                //           />
-                //         </Row>
-                //       ) : (
-                //         ""
-                //       )}
-                //     </>
-                //   ),
-                // },
               ]}
             />
           </Col>
@@ -856,10 +729,9 @@ const Nav = (props) => {
                   className={"click-btn font-weight-600 letter-spacing-small"}
                   onClick={async () => {
                     dispatch(clearStates());
+                    dispatch(setUserCollateral(null));
                     successMessageNotify("Your are signed out!");
                     dispatch(clearWalletState());
-                    setWalletConnection({});
-                    setActiveConnections([]);
                     onClose();
                   }}
                   title={
@@ -943,10 +815,9 @@ const Nav = (props) => {
                   className={"click-btn font-weight-600 letter-spacing-small"}
                   onClick={async () => {
                     dispatch(clearStates());
+                    dispatch(setUserCollateral(null));
                     successMessageNotify("Your are signed out!");
                     dispatch(clearWalletState());
-                    setWalletConnection({});
-                    setActiveConnections([]);
                     onClose();
                   }}
                   title={

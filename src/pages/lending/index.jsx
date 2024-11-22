@@ -16,11 +16,12 @@ import { calculateOrdinalInCrypto } from "../../utils/common";
 
 const Lending = (props) => {
   const { reduxState, dispatch } = props.redux;
+  const { getAllBorrowRequests } = props.wallet;
   const approvedCollections = reduxState.constant.approvedCollections;
   const userAssets = reduxState.constant.userAssets;
   const allBorrowRequest = reduxState.constant.allBorrowRequest;
 
-  const ethvalue = reduxState.constant.ethvalue;
+  const chainvalue = reduxState.constant.chainvalue;
   const coinValue = reduxState.constant.coinValue;
 
   const { Text } = Typography;
@@ -164,7 +165,7 @@ const Lending = (props) => {
           Number(obj?.floorAsk?.price?.amount?.decimal)
             ? Number(obj?.floorAsk?.price?.amount?.decimal)
             : 0.0035,
-          ethvalue,
+          chainvalue,
           coinValue
         );
         return (
@@ -401,6 +402,7 @@ const Lending = (props) => {
         toggleLendModal={toggleLendModal}
         setLendModalData={setLendModalData}
         collapseActiveKey={collapseActiveKey}
+        getAllBorrowRequests={getAllBorrowRequests}
         setCollapseActiveKey={setCollapseActiveKey}
       />
 

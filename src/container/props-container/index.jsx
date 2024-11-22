@@ -5,15 +5,14 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Notify from "../../component/notification";
-import { apiFactory } from "../../ordinal_canister";
 import {
   setAgent,
   setAllBorrowRequest,
   setApprovedCollection,
   setApprovedCollectionObj,
   setBorrowCollateral,
+  setChainValue,
   setCoinValue,
-  setEthValue,
   setUserAssets,
   setUserCollateral,
 } from "../../redux/slice/constant";
@@ -21,14 +20,14 @@ import borrowJson from "../../utils/borrow_abi.json";
 import {
   API_METHODS,
   BorrowContractAddress,
-  IS_DEV,
-  IS_USER,
   TokenContractAddress,
+  apiUrl,
   calculateAPY,
   custodyAddress,
-  ordinals,
+  opencampusCanister,
 } from "../../utils/common";
 import tokenAbiJson from "../../utils/tokens_abi.json";
+import { openCampusApiFactory } from "../../opencampus_canister";
 
 export const propsContainer = (Component) => {
   function ComponentWithRouterProp(props) {
@@ -49,8 +48,6 @@ export const propsContainer = (Component) => {
     const ckEthAgent = reduxState.constant.ckEthAgent;
     const ckEthActorAgent = reduxState.constant.ckEthActorAgent;
     const withdrawAgent = reduxState.constant.withdrawAgent;
-    const coinValue = reduxState.constant.coinValue;
-    const ethvalue = reduxState.constant.ethvalue;
 
     const [isEthConnected, setIsEthConnected] = useState(false);
 
@@ -67,22 +64,25 @@ export const propsContainer = (Component) => {
       }
     }, [activeWallet.length]);
 
-    const ethPrice = async () => {
-      const ethData = await API_METHODS.get(
-        `${process.env.REACT_APP_COINGECKO_API}?ids=${process.env.REACT_APP_BTC_TICKER}&vs_currencies=usd`
+    const chainPrice = async () => {
+      const chainData = await API_METHODS.get(
+        `https://api.coinlayer.com/api/live?access_key=61858072d88e8fee2d8859471417c64b&symbols=POLY`
       );
-      return ethData;
+      // console.log("chainData", chainData);
+
+      return chainData;
     };
 
-    const fetchETHLiveValue = async () => {
+    const fetchChainLiveValue = async () => {
       try {
-        const ethData = await ethPrice();
-        if (ethData.data["ethereum"]) {
-          const EthValue = ethData.data["ethereum"].usd;
-          dispatch(setEthValue(EthValue));
-        } else {
-          fetchETHLiveValue();
-        }
+        // const chainData = await chainPrice();
+        // if (chainData.data.rates["POLY"]) {
+        //   const ChainValue = chainData.data.rates["POLY"];
+        //   dispatch(setChainValue(ChainValue));
+        // } else {
+        //   // fetchChainLiveValue();
+        // }
+        dispatch(setChainValue(0.45));
       } catch (error) {
         // Notify("error", "Failed to fetch ckBtc");
       }
@@ -96,9 +96,9 @@ export const propsContainer = (Component) => {
               host: process.env.REACT_APP_HTTP_AGENT_ACTOR_HOST,
             });
 
-            const agent = Actor.createActor(apiFactory, {
+            const agent = Actor.createActor(openCampusApiFactory, {
               agent: ordinalAgent,
-              canisterId: ordinals,
+              canisterId: opencampusCanister,
             });
 
             dispatch(setAgent(agent));
@@ -113,7 +113,7 @@ export const propsContainer = (Component) => {
     useEffect(() => {
       (() => {
         setInterval(async () => {
-          if (ckBtcAgent) fetchETHLiveValue();
+          if (ckBtcAgent) fetchChainLiveValue();
         }, [300000]);
         return () => clearInterval();
       })();
@@ -122,81 +122,52 @@ export const propsContainer = (Component) => {
 
     useEffect(() => {
       (async () => {
-        // if (api_agent) {
-        //   const result = await api_agent.get_collections();
-        //   const approvedCollections = await api_agent.getApproved_Collections();
-        //   const collections = JSON.parse(result);
-        //   if (approvedCollections.length) {
-        const approvedCollections = [
-          "fewoworld-flowers",
-          "discord-utility-scam-ep-2",
-          "snow-bears",
-          "web3-identity-crisis",
-          "checkpunks",
-          "goblintownhelix",
-          "oreraid",
-          "everybodys",
-          "moongirls-emanuele-ferrari",
-          "wonderful-composition-with-grids",
-          "etherpolice-origin",
-          "akutar-accessories",
-          "end-of-sartoshi",
-          "egglins-xyz",
-          "thebunnyisland",
-          // "degen-goblins",
-          // "akutar-mint-pass",
-          // "precious-baby-phepes",
-          // "kongclub-official",
-          // "zombiefrens",
-          // "gladguy-collection",
-          // "uae-nft-from-desert-to-mars-thomas-dubois",
-        ];
-        const collectionPromise = approvedCollections.map(
-          async (collection) => {
-            return new Promise(async (resolve) => {
-              const options = {
-                method: "GET",
-                url: `${process.env.REACT_APP_MAGICEDEN_API}/v3/rtp/ethereum/collections/v7?slug=${collection}`,
-                headers: {
-                  accept: "*/*",
-                  Authorization: process.env.REACT_APP_MAGICEDEN_BEARER,
-                },
-              };
-              axios
-                .request(options)
-                .then((response) => {
-                  resolve(...response.data.collections);
-                })
-                .catch((error) => {
-                  console.log(error);
-                });
-            });
-          }
-        );
+        if (api_agent) {
+          const approvedCollections = await api_agent.getApproved_Collections();
 
-        const collectionDetails = await Promise.all(collectionPromise);
-        const finalResult = collectionDetails.map((col) => {
-          // const { yield: yields, terms } = col;
-          const term = 7;
-          const APY = calculateAPY(5, term);
-          const LTV = 0;
-          return {
-            ...col,
-            terms: term,
-            APY,
-            LTV,
-          };
-        });
-        console.log("finalResult", finalResult);
-        let collectionObj = {};
-        finalResult.forEach((col) => {
-          collectionObj[col.slug] = col;
-        });
-        dispatch(setApprovedCollection(finalResult));
-        dispatch(setApprovedCollectionObj(collectionObj));
-        // }
-        // dispatch(setCollection(collections));
-        // }
+          if (approvedCollections.length) {
+            const collectionPromise = approvedCollections.map(
+              async (collection) => {
+                const [, col] = collection;
+                return new Promise(async (resolve) => {
+                  const options = {
+                    method: "GET",
+                    url: `${apiUrl.Asset_server_base_url}/api/v1/get/collection/${col.collectionName}?chain=polygon`,
+                  };
+                  axios
+                    .request(options)
+                    .then((response) => {
+                      resolve({ ...col, ...response.data.collection });
+                    })
+                    .catch((error) => {
+                      console.log(error);
+                    });
+                });
+              }
+            );
+
+            const collectionDetails = await Promise.all(collectionPromise);
+            const finalResult = collectionDetails.map((col) => {
+              const { yield: yields, terms } = col;
+              const term = Number(terms);
+              const APY = calculateAPY(yields, term);
+              const LTV = 0;
+              return {
+                ...col,
+                terms: term,
+                APY,
+                LTV,
+              };
+            });
+
+            let collectionObj = {};
+            finalResult.forEach((col) => {
+              collectionObj[col.id] = col;
+            });
+            dispatch(setApprovedCollection(finalResult));
+            dispatch(setApprovedCollectionObj(collectionObj));
+          }
+        }
       })();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [api_agent, dispatch]);
@@ -205,44 +176,48 @@ export const propsContainer = (Component) => {
       try {
         const options = {
           method: "GET",
-          url: `${process.env.REACT_APP_MAGICEDEN_API}/v3/rtp/polygon/users/activity/v6?users=${custodyAddress}&limit=20&sortBy=eventTimestamp&includeMetadata=true`,
-          headers: {
-            accept: "*/*",
-            Authorization: process.env.REACT_APP_MAGICEDEN_BEARER,
-          },
+          url: `${apiUrl.Asset_server_base_url}/api/v1/token/activity/${custodyAddress}?chain=polygon`,
         };
 
         const result = await axios.request(options);
-        const activities = result.data.activities.filter(
+
+        // Step 1: Filter for transfer type activities
+        const transfers = result.data.activities.filter(
           (activity) => activity.type === "transfer"
         );
-        console.log("activities", activities);
 
-        const userActivity = activities.filter(
-          (activity) =>
-            activity.fromAddress.toLowerCase() === metaAddress.toLowerCase() &&
-            activity.toAddress.toLowerCase() === custodyAddress.toLowerCase()
-        );
-        const uniqueTokens = userActivity.reduce((map, item) => {
-          const { tokenId } = item.token;
-          // If tokenId doesn't exist in map or the current item's timestamp is more recent
-          if (!map[tokenId] || map[tokenId].timestamp < item.timestamp) {
-            map[tokenId] = item; // Update with the more recent entry
-          }
-          return map;
+        // Step 2: Group by tokenId and sort by timestamp descending
+        const grouped = transfers.reduce((acc, activity) => {
+          const tokenId = activity.token.tokenId;
+          if (!acc[tokenId]) acc[tokenId] = [];
+          acc[tokenId].push(activity);
+          return acc;
         }, {});
+
+        // Sort each tokenId group by timestamp descending
+        Object.keys(grouped).forEach((tokenId) => {
+          grouped[tokenId].sort((a, b) => b.timestamp - a.timestamp);
+        });
+
+        // Step 3: Extract the latest activity per tokenId
+        const latestActivities = Object.entries(grouped).reduce(
+          (acc, [tokenId, activities]) => {
+            const latestActivity = activities[0]; // The first item is the latest after sorting
+            // Step 4: Check if latest activity matches the constraints
+            if (
+              latestActivity.fromAddress.toLowerCase() ===
+                metaAddress.toLowerCase() &&
+              latestActivity.toAddress.toLowerCase() ===
+                custodyAddress.toLowerCase()
+            ) {
+              acc[tokenId] = latestActivity;
+            }
+            return acc;
+          },
+          {}
+        );
+
         try {
-          // const API = agentCreator(rootstockApiFactory, rootstock);
-          // const userAssets = await API.getUserSupply(
-          //   IS_USER ? address : WAHEED_ADDRESS
-          // );
-          // const supplyData = userAssets.map((asset) => JSON.parse(asset));
-          // colResult = await getCollectionDetails(supplyData);
-          // --------------------------------------------------
-
-          // console.log(Object.values(uniqueTokens));
-          // setEthAssets(Object.values(uniqueTokens));
-
           const provider = new ethers.providers.Web3Provider(window.ethereum);
           const signer = provider.getSigner();
           const contract = new ethers.Contract(
@@ -282,21 +257,7 @@ export const propsContainer = (Component) => {
             };
           });
 
-          // const finalData = userAssets.map((asset) => {
-          //   const req = userRequestTokens.find(
-          //     (req) => req.tokenId === Number(asset.tokenId)
-          //   );
-
-          //   return {
-          //     ...asset,
-          //     isToken: userMintedTokens.includes(Number(asset.tokenId))
-          //       ? true
-          //       : false,
-          //     isBorrowRequest: req ? true : false,
-          //   };
-          // });
-
-          const finalData = Object.values(uniqueTokens).map((asset) => {
+          const finalData = Object.values(latestActivities).map((asset) => {
             const req = userRequestTokens.find(
               (req) => req.tokenId === Number(asset.token.tokenId)
             );
@@ -309,7 +270,6 @@ export const propsContainer = (Component) => {
               isBorrowRequest: req ? true : false,
             };
           });
-          console.log("finaldata", finalData);
 
           const borrowCollateral = finalData.filter((asset) => asset.isToken);
 
@@ -320,7 +280,7 @@ export const propsContainer = (Component) => {
             error.message.includes("No NFT found") ||
             error.message.includes("No single NFT has been minted yet")
           ) {
-            const finalData = Object.values(uniqueTokens).map((asset) => {
+            const finalData = Object.values(latestActivities).map((asset) => {
               return {
                 ...asset,
                 isToken: [].includes(Number(asset.tokenId)) ? true : false,
@@ -369,19 +329,45 @@ export const propsContainer = (Component) => {
 
     const fetchCoinPrice = async () => {
       try {
-        const coinData = await API_METHODS.get(
-          `${process.env.REACT_APP_COINGECKO_API}?ids=${process.env.REACT_APP_COIN_TICKER}&vs_currencies=usd`
-        );
+        // const coinData = await API_METHODS.get(
+        //   `https://api.coinlayer.com/api/live?access_key=61858072d88e8fee2d8859471417c64b&symbols=POLY`
+        // );
 
-        if (coinData.data["edu-coin"]) {
-          const coinValue = coinData.data["edu-coin"].usd;
-          dispatch(setCoinValue(coinValue));
-        } else {
-          fetchCoinPrice();
-        }
+        // if (coinData.data.rates["edu-coin"]) {
+        //   const coinValue = coinData.data.rates["edu-coin"];
+        //   dispatch(setCoinValue(coinValue));
+        // } else {
+        //   // fetchCoinPrice();
+        dispatch(setCoinValue(0.51));
+        // }
       } catch (error) {
         // Notify("error", "Failed to fetch Aptos");
       }
+    };
+
+    const fetchUserAssets = async () => {
+      let config = {
+        method: "GET",
+        url: `${apiUrl.Asset_server_base_url}/api/v1/user/tokens/${metaAddress}?chain=polygon`,
+      };
+
+      axios
+        .request(config)
+        .then((response) => {
+          const isSpamFilter = response.data.tokens.filter(
+            (collection) => !collection.token.collection.isSpam
+          );
+
+          const result = isSpamFilter.map((collection) => {
+            return {
+              ...collection.token,
+            };
+          });
+          dispatch(setUserAssets(result));
+        })
+        .catch((error) => {
+          console.log(error);
+        });
     };
 
     useEffect(() => {
@@ -395,39 +381,8 @@ export const propsContainer = (Component) => {
     }, [api_agent, dispatch]);
 
     useEffect(() => {
-      console.log("COND", activeWallet.length && !userAssets);
-
       if (activeWallet.length && !userAssets) {
-        let config = {
-          method: "get",
-          url: `${process.env.REACT_APP_MAGICEDEN_API}/v3/rtp/${
-            IS_DEV ? "polygon" : "ethereum"
-          }/users/${
-            IS_USER ? metaAddress : "0xE98b997f529F643Bc67F217B1270A0F7D7a0EcB2"
-          }/tokens/v7?normalizeRoyalties=false&sortBy=acquiredAt&sortDirection=desc&limit=200&includeTopBid=false&includeAttributes=false&includeLastSale=false&includeRawData=false&filterSpamTokens=false&useNonFlaggedFloorAsk=false`,
-          headers: {
-            Authorization: process.env.REACT_APP_MAGICEDEN_BEARER,
-          },
-        };
-
-        axios
-          .request(config)
-          .then((response) => {
-            const isSpamFilter = response.data.tokens.filter(
-              (collection) => !collection.token.collection.isSpam
-            );
-            console.log("isSpamFilter", isSpamFilter);
-
-            const result = isSpamFilter.map((collection) => {
-              return {
-                ...collection.token,
-              };
-            });
-            dispatch(setUserAssets(result));
-          })
-          .catch((error) => {
-            console.log(error);
-          });
+        fetchUserAssets();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeWallet, collections, metaAddress]);
@@ -453,7 +408,7 @@ export const propsContainer = (Component) => {
 
     useEffect(() => {
       //Fetching BTC Value
-      fetchETHLiveValue();
+      fetchChainLiveValue();
 
       fetchCoinPrice();
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -473,6 +428,7 @@ export const propsContainer = (Component) => {
           ckBtcActorAgent,
           ckEthActorAgent,
           getCollaterals,
+          fetchUserAssets,
           getAllBorrowRequests,
         }}
       />

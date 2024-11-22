@@ -11,7 +11,7 @@ const Home = (props) => {
   const { reduxState } = props.redux;
   const collections = reduxState.constant.approvedCollections;
   const coinValue = reduxState.constant.coinValue;
-  const ethvalue = reduxState.constant.ethvalue;
+  const chainvalue = reduxState.constant.chainvalue;
 
   const { Text } = Typography;
   const { useBreakpoint } = Grid;
@@ -64,7 +64,7 @@ const Home = (props) => {
       setIsFetching(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [collections]);
 
   return (
     <React.Fragment>
@@ -72,7 +72,7 @@ const Home = (props) => {
       <Row>
         <Col>
           <h1 className="text-color-four letter-spacing-small">
-            Ethereum Ordinal Collections
+            Polygon NFT Collections
           </h1>
         </Col>
       </Row>
@@ -202,7 +202,7 @@ const Home = (props) => {
                                 width={20}
                                 height={22}
                               />
-                              {Math.round((volume * ethvalue) / coinValue)}
+                              {Math.round((volume * chainvalue) / coinValue)}
                             </Flex>
                           </div>
                         </div>
@@ -216,28 +216,36 @@ const Home = (props) => {
         </Row>
       </motion.ul>
 
-      <Row justify={"center"} className="m-bottom" style={{ marginBottom: 50 }}>
-        <Col>
-          <Text
-            className="font-large pointer text-color-four"
-            onClick={() =>
-              setCollectionList(
-                collectionList.length > 10
-                  ? collections.slice(0, 9)
-                  : collections
-              )
-            }
-          >
-            {isFetching ? (
-              <SpinningCircles />
-            ) : collectionList.length > 10 ? (
-              "Hide"
-            ) : (
-              "View all"
-            )}
-          </Text>
-        </Col>
-      </Row>
+      {collections.length > 9 ? (
+        <Row
+          justify={"center"}
+          className="m-bottom"
+          style={{ marginBottom: 50 }}
+        >
+          <Col>
+            <Text
+              className="font-large pointer text-color-four"
+              onClick={() =>
+                setCollectionList(
+                  collectionList.length > 10
+                    ? collections.slice(0, 9)
+                    : collections
+                )
+              }
+            >
+              {isFetching ? (
+                <SpinningCircles />
+              ) : collectionList.length > 10 ? (
+                "Hide"
+              ) : (
+                "View all"
+              )}
+            </Text>
+          </Col>
+        </Row>
+      ) : (
+        ""
+      )}
     </React.Fragment>
   );
 };

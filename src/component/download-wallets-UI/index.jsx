@@ -1,15 +1,11 @@
 import { Col, Row, Typography } from "antd";
 import { IoCloudDownload } from "react-icons/io5";
 import { Link } from "react-router-dom";
-import magiceden from "../../assets/brands/magiceden.svg";
 import myordinals from "../../assets/logo/ordinalslogo.png";
 import metamask from "../../assets/wallet-logo/meta.png";
-import unisat from "../../assets/wallet-logo/unisat_logo.png";
 
 const WalletUI = ({ isAirdrop, isPlugError }) => {
   const { Text } = Typography;
-  const unisatLink = process.env.REACT_APP_UNISAT;
-  const magicedenLink = process.env.REACT_APP_MAGICEDEN;
   const metaLink = process.env.REACT_APP_META;
 
   return (
@@ -70,29 +66,6 @@ const WalletUI = ({ isAirdrop, isPlugError }) => {
                     alt="logo"
                     className="pointer"
                     width={60}
-                  />
-                </Link>
-              </Col>
-              <Col>
-                <Link
-                  className="iconalignment float-up-medium"
-                  target="_blank"
-                  to={unisatLink}
-                >
-                  <img src={unisat} alt="logo" className="pointer" width={55} />
-                </Link>
-              </Col>
-              <Col>
-                <Link
-                  className="iconalignment float-up-medium"
-                  target="_blank"
-                  to={magicedenLink}
-                >
-                  <img
-                    src={magiceden}
-                    alt="logo"
-                    className="pointer"
-                    width={55}
                   />
                 </Link>
               </Col>

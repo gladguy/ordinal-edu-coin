@@ -18,7 +18,7 @@ const OffersModal = ({
   const state = useSelector((state) => state);
   const offers = state.constant.offers;
   const metaAddress = state.wallet.meta.address;
-  const ethvalue = state.constant.ethvalue;
+  const chainvalue = state.constant.chainvalue;
   const coinValue = state.constant.coinValue;
 
   const ETH_ZERO = process.env.REACT_APP_ETH_ZERO;
@@ -52,7 +52,7 @@ const OffersModal = ({
 
         floor = calculateOrdinalInCrypto(
           floor,
-          ethvalue,
+          chainvalue,
           coinValue
         ).ordinalIncrypto;
         const loanAmount = Number(obj.loanAmount) / ETH_ZERO;
@@ -77,7 +77,7 @@ const OffersModal = ({
       ),
     },
   ];
-  console.log("offerModalData", offerModalData);
+
   return (
     <ModalDisplay
       width={"70%"}
@@ -139,7 +139,7 @@ const OffersModal = ({
 
                       floor = calculateOrdinalInCrypto(
                         floor,
-                        ethvalue,
+                        chainvalue,
                         coinValue
                       ).ordinalIncrypto;
                       const loanAmount = Number(obj.loanAmount) / ETH_ZERO;

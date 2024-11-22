@@ -21,6 +21,7 @@ import { MdContentCopy, MdDeleteForever, MdTour } from "react-icons/md";
 import { TbSend } from "react-icons/tb";
 import { Bars } from "react-loading-icons";
 import { Link } from "react-router-dom";
+import Web3 from "web3";
 import Bitcoin from "../../assets/coin_logo/edu_coin.png";
 import CustomButton from "../../component/Button";
 import WalletUI from "../../component/download-wallets-UI";
@@ -36,20 +37,21 @@ import {
   custodyAddress,
   DateTimeConverter,
   sliceAddress,
-  TokenContractAddress,
+  switchToOpenCampusNetwork,
+  switchToPolygonNetwork,
 } from "../../utils/common";
 import tokenJson from "../../utils/tokens_abi.json";
-import Web3 from "web3";
 
 const Portfolio = (props) => {
   const { reduxState, dispatch } = props.redux;
+  const { fetchUserAssets } = props.wallet;
   const activeWallet = reduxState.wallet.active;
   const walletState = reduxState.wallet;
   const dashboardData = reduxState.constant.dashboardData;
   const userAssets = reduxState.constant.userAssets || [];
   const collectionObj = reduxState.constant.approvedCollectionsObj || {};
 
-  const btcValue = reduxState.constant.ethvalue;
+  const chainvalue = reduxState.constant.chainvalue;
   const coinValue = reduxState.constant.coinValue;
   const metaAddress = walletState.meta.address;
 
@@ -57,6 +59,7 @@ const Portfolio = (props) => {
 
   const { Text } = Typography;
   const [copy, setCopy] = useState("Copy");
+  const [networkId, setNetworkId] = useState(0);
   const [agreeCheckbox, setAgreeCheckbox] = useState(false);
 
   const [downloadWalletModal, setDownloadWalletModal] = useState(false);
@@ -148,11 +151,15 @@ const Portfolio = (props) => {
     setHandleSupplyModal(false);
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     setIsModalOpen(false);
     setAgreeCheckbox(false);
     setHandleSupplyModal(false);
     setIsSupplyModalLoading(false);
+    if (networkId === 137) {
+      await switchToOpenCampusNetwork();
+      await getNetwork();
+    }
   };
 
   const AssetsToSupplyTableColumns = [
@@ -200,10 +207,10 @@ const Portfolio = (props) => {
                   className="text-color-one font-xsmall letter-spacing-small"
                 >
                   <img src={Bitcoin} alt="noimage" width={20} />
-                  {((floor * btcValue) / coinValue).toFixed(2)}{" "}
+                  {((floor * chainvalue) / coinValue).toFixed(2)}{" "}
                 </Flex>
                 <span className="text-color-two font-xsmall letter-spacing-small">
-                  $ {(floor * btcValue).toFixed(2)}
+                  $ {(floor * chainvalue).toFixed(2)}
                 </span>
               </Flex>
             ) : (
@@ -244,7 +251,7 @@ const Portfolio = (props) => {
           ...obj,
           collection: {
             ...obj.collection,
-            ...collectionObj[obj.collection.slug],
+            ...collectionObj[obj.collection.id],
           },
         };
         return (
@@ -252,9 +259,11 @@ const Portfolio = (props) => {
             <Dropdown.Button
               className="dbButtons-grey font-weight-600 letter-spacing-small"
               trigger={"click"}
-              onClick={() => {
+              onClick={async () => {
                 setHandleSupplyModal(true);
                 setSupplyModalItems(objs);
+                await switchToPolygonNetwork();
+                await getNetwork();
               }}
               menu={{
                 items: options,
@@ -268,7 +277,6 @@ const Portfolio = (props) => {
       },
     },
   ];
-  console.log(supplyModalItems);
 
   const loanColumns = [
     {
@@ -446,6 +454,7 @@ const Portfolio = (props) => {
         _loanAmount.toString(),
         "ether"
       ); // 1 Core, with 18 decimals
+      console.log("obj", Wei_loanAmount, Wei_loanAmount + 1);
 
       const requestResult = await borrowContract.loanRepayment(
         nftContract,
@@ -466,90 +475,11 @@ const Portfolio = (props) => {
       console.log("repay error", error);
     }
   };
-  console.log("supplyModalItems", supplyModalItems);
-
-  async function switchToOpenCampusNetwork() {
-    try {
-      if (window.ethereum) {
-        const chainId = "0xA0F84"; // 656476 in hexadecimal
-
-        // Request MetaMask to add the OpenCampus network
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId: chainId,
-              chainName: "OpenCampus Network",
-              rpcUrls: ["https://open-campus-codex-sepolia.drpc.org"],
-              nativeCurrency: {
-                name: "edu",
-                symbol: "edu",
-                decimals: 18,
-              },
-              blockExplorerUrls: ["https://explorer.opencampus.org"], // Replace with actual explorer URL if available
-            },
-          ],
-        });
-
-        // After adding the network, request account access
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-
-        console.log("Switched to OpenCampus Network!");
-      } else {
-        console.error("MetaMask is not installed!");
-      }
-    } catch (error) {
-      console.error("Failed to switch network", error);
-    }
-  }
-
-  async function switchToPolygonNetwork() {
-    try {
-      // Check if MetaMask is installed
-      if (window.ethereum) {
-        const chainId = "0x89"; // Polygon Mainnet Chain ID (137 in hex)
-
-        // Request to switch to Polygon network
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId: chainId,
-              chainName: "Polygon Mainnet",
-              rpcUrls: ["https://polygon-rpc.com/"],
-              nativeCurrency: {
-                name: "MATIC",
-                symbol: "MATIC",
-                decimals: 18,
-              },
-              blockExplorerUrls: ["https://polygonscan.com/"],
-            },
-          ],
-        });
-
-        // After adding the network, request account access
-        // await window.ethereum.request({ method: "eth_requestAccounts" });
-
-        Notify("success", "Switched to Polygon Network!");
-      } else {
-        Notify("error", "MetaMask is not installed!");
-      }
-    } catch (error) {
-      console.error("Failed to switch network", error);
-    }
-  }
 
   const handleTransferToken = async () => {
     try {
       setIsSupplyModalLoading(true);
-      const web3 = new Web3(window.ethereum);
-      const networkId = await web3.eth.net.getId();
-      console.log("networkId", networkId);
 
-      if (Number(networkId) !== 137) {
-        switchToPolygonNetwork();
-        return;
-      }
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const nftContract = new ethers.Contract( //Created with (Nft) token's contract
@@ -557,19 +487,13 @@ const Portfolio = (props) => {
         tokenJson,
         signer
       );
-      console.log(
-        "Token contract",
-        supplyModalItems.contract,
-        supplyModalItems.tokenId
-      );
 
       // eth call
       const approveRequest = await nftContract.approve(
         custodyAddress, //TO
         supplyModalItems.tokenId //tokenId
       );
-
-      console.log("approveRequest", approveRequest);
+      await approveRequest.wait();
 
       // eth call
       const transferRequest = await nftContract.transferFrom(
@@ -577,13 +501,22 @@ const Portfolio = (props) => {
         custodyAddress, //TO (custody eth address)
         supplyModalItems.tokenId //tokenId
       );
-      console.log("transferRequest", transferRequest);
+
+      await transferRequest.wait();
+      await switchToOpenCampusNetwork();
+      await fetchUserAssets();
+      setHandleSupplyModal(false);
       Notify("success", "Supply successfull");
-      setIsSupplyModalLoading(false);
     } catch (error) {
       setIsSupplyModalLoading(false);
       console.log("Transfer error", error);
     }
+  };
+
+  const getNetwork = async () => {
+    const web3 = new Web3(window.ethereum);
+    let networkId = await web3.eth.net.getId();
+    setNetworkId(Number(networkId));
   };
 
   useEffect(() => {
@@ -592,35 +525,11 @@ const Portfolio = (props) => {
         fetchLendingRequests();
         fetchBorrowingRequests();
         fetchUserRequests();
+        getNetwork();
       })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWallet]);
-
-  // const fetchFloorPrice = async () => {
-  //   const price = userAssets.map((collection) => {
-  //     return new Promise(async (res) => {
-  //       const result = await axios.get(
-  //         `${process.env.REACT_APP_OPENSEA_API}/api/v2/collections/${collection.collection}/stats`,
-  //         {
-  //           headers: {
-  //             "x-api-key": process.env.REACT_APP_OPENSEA_APIKEY,
-  //           },
-  //         }
-  //       );
-  //       res({ ...collection, price: result.data.total });
-  //     });
-  //   });
-  //   const revealedPromise = await Promise.all(price);
-  //   setAssets(revealedPromise);
-  // };
-
-  // useEffect(() => {
-  //   if (userAssets[0]) {
-  //     fetchFloorPrice();
-  //   }
-  // }, []);
-  console.log(userAssets);
 
   return (
     <>
@@ -1153,7 +1062,7 @@ const Portfolio = (props) => {
           <span className="text-color-two mt-15 pointer" id="agree">
             <Checkbox
               for="agree"
-              value={agreeCheckbox}
+              checked={agreeCheckbox}
               onChange={(e) => setAgreeCheckbox(e.target.checked)}
             />{" "}
             I agree to transfer the NFT to EDU bridge as collateral for a loan.
@@ -1164,14 +1073,16 @@ const Portfolio = (props) => {
           <CustomButton
             block
             loading={isSupplyModalLoading}
-            onClick={() => {
+            onClick={async () => {
               if (agreeCheckbox) {
-                handleTransferToken();
+                if (networkId === 137) {
+                  handleTransferToken();
+                }
               } else {
                 Notify("info", "Agree terms and conditions!");
               }
             }}
-            title="Supply"
+            title={"Supply"}
             className="click-btn font-weight-600 letter-spacing-small m-25"
           />
         </Row>

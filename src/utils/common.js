@@ -2,9 +2,8 @@ import { Actor, HttpAgent } from "@dfinity/agent";
 import axios from "axios";
 import { ethers } from "ethers";
 import Web3 from "web3";
-import magiceden from "../assets/brands/magiceden.svg";
 import meta from "../assets/wallet-logo/meta.png";
-import unisat from "../assets/wallet-logo/unisat_logo.png";
+import Notify from "../component/notification";
 
 export const API_METHODS = {
   get: axios.get,
@@ -15,40 +14,17 @@ export const API_METHODS = {
 };
 
 export const apiUrl = {
-  Coin_base_url: process.env.REACT_APP_COINBASE_API,
   Asset_server_base_url: process.env.REACT_APP_ASSET_SERVER,
-  Unisat_open_api: process.env.REACT_APP_UNISAT_OPEN_API,
-  Ordiscan_api: process.env.REACT_APP_ORDISCAN_API
 };
 
-export const UNISAT_WALLET_KEY = "unisat";
-export const MAGICEDEN_WALLET_KEY = "magiceden";
 export const META_WALLET_KEY = "meta";
-export const APTOS_BRAND_KEY = "aptos";
-// export const chainId = 1; // Ethereum Mainnet Chain ID
-export const chainId = 656476; // OpenCampus Testnet Chain ID
+export const chainId = 41923; // OpenCampus Mainnet Chain ID
 export const IS_USER = true;
-export const IS_DEV = true;
+export const IS_DEV = false;
 
-export const ordinals = process.env.REACT_APP_ORDINAL_CANISTER_ID;
-export const rootstock = process.env.REACT_APP_ROOTSTOCK_CANISTER_ID;
-export const storage = process.env.REACT_APP_STORAGE_CANISTER_ID;
-export const ordiscan_bearer = process.env.REACT_APP_ORDISCAN_BEARER;
+export const opencampusCanister = process.env.REACT_APP_OPENCAMPUS_CANISTER_ID;
 export const foundaryId = Number(process.env.REACT_APP_FOUNDARY_ID);
-export const custodyAddress = process.env.REACT_APP_ORDINAL_CUSTODY_ADDRESS;
-
-export const BTCWallets = [
-  {
-    label: "MAGICEDEN",
-    image: magiceden,
-    key: MAGICEDEN_WALLET_KEY,
-  },
-  {
-    label: "UNISAT",
-    image: unisat,
-    key: UNISAT_WALLET_KEY,
-  }
-];
+export const custodyAddress = process.env.REACT_APP_TOKEN_CUSTODY_ADDRESS;
 
 export const paymentWallets = [
   {
@@ -133,8 +109,8 @@ export const calculateOrdinalInCrypto = (ordinalFloor, BTCPriceInUSD, CryptoPric
 }
 
 export const IndexContractAddress = process.env.REACT_APP_REGISTRATION;
-export const TokenContractAddress = process.env.REACT_APP_NFT;
-export const BorrowContractAddress = process.env.REACT_APP_LOAN_LEDGER;
+export const TokenContractAddress = process.env.REACT_APP_NFT_CONTRACT;
+export const BorrowContractAddress = process.env.REACT_APP_LOAN_CONTRACT;
 
 export const contractGenerator = async (abi, contractAddress) => {
   const web3 = new Web3(window.ethereum);
@@ -236,3 +212,100 @@ export const daysCalculator = (_timestamp = Date.now(), _daysAfter = 7) => {
 
   return { date_time: formattedResult, timestamp: resultDate.getTime() };
 };
+
+export const openCampusNetworkTestnetParams = {
+  chainId: "0xA045C",
+  chainName: "Open Campus Codex",
+  rpcUrls: [
+    "https://rpc.open-campus-codex.gelato.digital/",
+  ],
+  blockExplorerUrls: [
+    "https://opencampus-codex.blockscout.com/",
+  ],
+  nativeCurrency: {
+    name: "EDU Token",
+    symbol: "EDU", // Replace with the symbol of the native token
+    decimals: 18,
+  },
+}
+
+export const openCampusNetworkMainnetParams = {
+  chainId: '0xa3c3',
+  chainName: 'EDU Chain Mainnet', // Replace with the correct name
+  nativeCurrency: {
+    name: 'EDU Token', // Replace with token name
+    symbol: 'EDU', // Replace with token symbol
+    decimals: 18,
+  },
+  rpcUrls: ['https://rpc.edu-chain.network'], // Replace with the correct RPC URL
+  blockExplorerUrls: ['https://explorer.edu-chain.network'], // Replace with the correct explorer URL
+}
+
+export async function switchToOpenCampusNetwork() {
+
+  try {
+    if (window.ethereum) {
+      // Request MetaMask to switch to OpenCampus
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: openCampusNetworkMainnetParams.chainId }],
+      });
+    } else {
+      Notify("error", "MetaMask is not installed!");
+    }
+  } catch (error) {
+    if (error.code === 4902) {
+      // If the network is not added, request to add it
+      try {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [openCampusNetworkMainnetParams],
+        });
+      } catch (addError) {
+        console.error("Failed to add OpenCampus network:", addError);
+      }
+    } else {
+      console.error("Failed to switch to OpenCampus network:", error);
+    }
+  }
+}
+
+export async function switchToPolygonNetwork() {
+  const polygonParams = {
+    chainId: "0x89", // Hexadecimal value of 137 (Polygon Mainnet chain ID)
+    chainName: "Polygon Mainnet",
+    nativeCurrency: {
+      name: "MATIC",
+      symbol: "MATIC",
+      decimals: 18,
+    },
+    rpcUrls: ["https://polygon-rpc.com"], // Recommended Polygon RPC URL
+    blockExplorerUrls: ["https://polygonscan.com"],
+  };
+
+  try {
+    if (window.ethereum) {
+      // Request MetaMask to switch to Polygon
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: polygonParams.chainId }],
+      });
+    } else {
+      Notify("error", "MetaMask is not installed!");
+    }
+  } catch (error) {
+    if (error.code === 4902) {
+      // If the network is not added, request to add it
+      try {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [polygonParams],
+        });
+      } catch (addError) {
+        console.error("Failed to add Polygon network:", addError);
+      }
+    } else {
+      console.error("Failed to switch to Polygon network:", error);
+    }
+  }
+}

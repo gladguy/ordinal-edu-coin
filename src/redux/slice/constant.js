@@ -4,7 +4,7 @@ const state = {
   isLoading: false,
   loaderTip: "Loading...",
   collection: ["", "", "", "", "", "", "", "", "", "", "", ""],
-  ethvalue: null,
+  chainvalue: null,
   coinValue: null,
   airPoints: null,
   collectionName: null,
@@ -55,8 +55,8 @@ const constantSlice = createSlice({
       state.approvedCollectionsObj = action.payload;
     },
 
-    setEthValue: (state, action) => {
-      state.ethvalue = action.payload;
+    setChainValue: (state, action) => {
+      state.chainvalue = action.payload;
     },
 
     setCoinValue: (state, action) => {
@@ -153,7 +153,7 @@ export const {
   setLoading,
   setLoaderTip,
   setCollection,
-  setEthValue,
+  setChainValue,
   setAirDropData,
   setAirPoints,
   setCollectionName,

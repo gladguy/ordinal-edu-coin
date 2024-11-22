@@ -1,21 +1,18 @@
-import { Col, Divider, Flex, Row, Tooltip, Typography } from "antd";
+import { Col, Flex, Popconfirm, Row, Tooltip, Typography } from "antd";
+import axios from "axios";
 import { ethers } from "ethers";
 import React, { useEffect, useState } from "react";
-import { FaRegSmileWink } from "react-icons/fa";
 import { FcApproval, FcHighPriority } from "react-icons/fc";
 import { ImSad } from "react-icons/im";
-import { IoInformationCircleSharp, IoWarningSharp } from "react-icons/io5";
+import { IoInformationCircleSharp } from "react-icons/io5";
 import { LuRefreshCw } from "react-icons/lu";
-import { MdContentCopy } from "react-icons/md";
 import { PiCopyBold } from "react-icons/pi";
 import { Bars } from "react-loading-icons";
 import { Link } from "react-router-dom";
 import Bitcoin from "../../assets/coin_logo/edu_coin.png";
 import CustomButton from "../../component/Button";
-import ModalDisplay from "../../component/modal";
 import Notify from "../../component/notification";
 import TableComponent from "../../component/table";
-import WalletConnectDisplay from "../../component/wallet-error-display";
 import { propsContainer } from "../../container/props-container";
 import {
   setBorrowCollateral,
@@ -24,45 +21,29 @@ import {
 } from "../../redux/slice/constant";
 import {
   Capitalaize,
-  MAGICEDEN_WALLET_KEY,
   TokenContractAddress,
-  UNISAT_WALLET_KEY,
+  apiUrl,
   custodyAddress,
   sliceAddress,
 } from "../../utils/common";
 import tokenAbiJson from "../../utils/tokens_abi.json";
-import axios from "axios";
 
 const DBridge = (props) => {
-  const { getCollaterals } = props.wallet;
-  const { reduxState, isPlugError, dispatch } = props.redux;
+  const { getCollaterals, fetchUserAssets } = props.wallet;
+  const { reduxState, dispatch } = props.redux;
   const activeWallet = reduxState.wallet.active;
 
-  const walletState = reduxState.wallet;
   const metaAddress = reduxState.wallet.meta.address;
-  const btcValue = reduxState.constant.ethvalue;
+  const chainvalue = reduxState.constant.chainvalue;
   const coinValue = reduxState.constant.coinValue;
   const userCollateral = reduxState.constant.userCollateral;
-  const borrowCollateral = reduxState.constant.borrowCollateral;
   const collectionObj = reduxState.constant.approvedCollectionsObj || {};
-  // console.log("userCollateral", userCollateral);
 
   const { Text } = Typography;
 
   // USE STATE
   const [borrowData, setBorrowData] = useState(null);
   const [lendData, setLendData] = useState([]);
-  const [ethAssets, setEthAssets] = useState([]);
-
-  const [copy, setCopy] = useState("Copy");
-
-  const [supplyModalItems, setSupplyModalItems] = useState(null);
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [handleSupplyModal, setHandleSupplyModal] = useState(false);
-
-  const BTC_ZERO = process.env.REACT_APP_BTC_ZERO;
-  const CONTENT_API = process.env.REACT_APP_ORDINALS_CONTENT_API;
 
   // COMPONENTS & FUNCTIONS
   if (borrowData !== null) {
@@ -77,34 +58,9 @@ const DBridge = (props) => {
     });
   }
 
-  const handleOk = () => {
-    setIsModalOpen(false);
-    setHandleSupplyModal(false);
-  };
-
-  const handleCancel = () => {
-    setIsModalOpen(false);
-    setHandleSupplyModal(false);
-  };
-
-  const options = [
-    {
-      key: "1",
-      label: (
-        <CustomButton
-          className={"click-btn font-weight-600 letter-spacing-small"}
-          title={"Details"}
-          size="medium"
-          onClick={() => setIsModalOpen(true)}
-        />
-      ),
-    },
-  ];
-
   const handleTokenMint = async (tokenId, contractAddress) => {
     try {
       dispatch(setLoading(true));
-      console.log("tokenId, contractAddress", tokenId, contractAddress);
 
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
@@ -114,7 +70,7 @@ const DBridge = (props) => {
         signer
       );
 
-      const mintResult = await contract.mintOrdinal(tokenId, contractAddress);
+      const mintResult = await contract.mintNFT(tokenId, contractAddress);
       await mintResult.wait();
       if (mintResult.hash) {
         Notify("success", "Minting success!");
@@ -125,6 +81,11 @@ const DBridge = (props) => {
       dispatch(setLoading(false));
     } catch (error) {
       dispatch(setLoading(false));
+      if (
+        error.message.includes("Token is already minted with this contract")
+      ) {
+        Notify("error", "Token is already minted with this contract");
+      }
       console.log("minting error", error);
     }
   };
@@ -141,31 +102,51 @@ const DBridge = (props) => {
         signer
       );
 
-      const mintResult = await contract.burn(obj.token.tokenId);
+      const estimatedGas = await contract.estimateGas.burn(obj.token.tokenId);
+
+      // Send the transaction with the estimated gas
+      const mintResult = await contract.burn(obj.token.tokenId, {
+        gasLimit: estimatedGas * 2, // Optionally, add a buffer here if needed, e.g., estimatedGas.mul(1.2)
+      });
+
       await mintResult.wait();
       if (mintResult.hash) {
-        Notify("success", "Burn success!");
+        Notify("success", "Token Burn success!");
         getCollaterals();
-        // fetchContractPoints();
+        await transferUserToken(obj);
       }
 
-      const result = await axios.post(
-        "http://localhost:3030/api/v1/send/token",
-        {
-          tokenId: obj.token.tokenId,
-          contract: obj.contract,
-        }
-      );
-      if (result.data.success) {
-        Notify("success", result.data.message);
-      } else {
-        Notify("error", result.data.message);
-      }
-      console.log("result", result.data);
       dispatch(setLoading(false));
     } catch (error) {
       dispatch(setLoading(false));
       console.log("Burn error", error);
+    }
+  };
+
+  const transferUserToken = async (obj) => {
+    try {
+      dispatch(setLoading(true));
+      // Transfering token to the owner
+      const result = await axios.post(
+        `${apiUrl.Asset_server_base_url}/api/v1/send/token`,
+        {
+          tokenId: obj.token.tokenId,
+          contract: obj.contract,
+          address: metaAddress,
+        }
+      );
+
+      if (result.data.success) {
+        Notify("success", result.data.message);
+        getCollaterals();
+        fetchUserAssets();
+      } else {
+        Notify("error", result.data.message);
+      }
+      dispatch(setLoading(false));
+    } catch (error) {
+      console.log("Transfer token error", error);
+      dispatch(setLoading(false));
     }
   };
 
@@ -209,7 +190,7 @@ const DBridge = (props) => {
       align: "center",
       dataIndex: "APY",
       render: (_, obj) => {
-        const data = collectionObj[obj?.collection?.slug];
+        const data = collectionObj[obj?.collection?.collectionId];
         return <Text className={"text-color-one"}>{data?.APY}%</Text>;
       },
     },
@@ -219,7 +200,7 @@ const DBridge = (props) => {
       align: "center",
       dataIndex: "terms",
       render: (_, obj) => {
-        const data = collectionObj[obj?.collection?.slug];
+        const data = collectionObj[obj?.collection?.collectionId];
         return (
           <Text className={"text-color-one"}>{Number(data?.terms)} Days</Text>
         );
@@ -244,22 +225,27 @@ const DBridge = (props) => {
       align: "center",
       dataIndex: "value",
       render: (_, obj) => {
-        const floor = Number(obj?.collection?.floorPrice)
-          ? Number(obj?.collection?.floorPrice)
-          : 0.0035;
+        const data = collectionObj[obj?.collection?.collectionId];
+        const floor = Number(data.floorAsk?.price?.amount?.decimal)
+          ? Number(data.floorAsk?.price?.amount?.decimal)
+          : 0;
         return (
           <>
-            <Flex vertical align="center">
-              <Flex
-                align="center"
-                gap={3}
-                className="text-color-one font-xsmall letter-spacing-small"
-              >
-                <img src={Bitcoin} alt="noimage" width={20} />
-                {(((floor / BTC_ZERO) * btcValue) / coinValue).toFixed(2)}{" "}
+            {floor ? (
+              <Flex vertical align="center">
+                <Flex
+                  align="center"
+                  gap={3}
+                  className="text-color-one font-xsmall letter-spacing-small"
+                >
+                  <img src={Bitcoin} alt="noimage" width={20} />
+                  {((floor * chainvalue) / coinValue).toFixed(2)}
+                </Flex>
+                ${(floor * chainvalue).toFixed(2)}
               </Flex>
-              ${((floor / BTC_ZERO) * btcValue).toFixed(2)}
-            </Flex>
+            ) : (
+              "-"
+            )}
           </>
         );
       },
@@ -313,70 +299,25 @@ const DBridge = (props) => {
                   onClick={() =>
                     handleTokenMint(obj.token.tokenId, obj.contract)
                   }
-                  menu={{
-                    items: options,
-                    onClick: () => setSupplyModalItems(obj),
-                  }}
                 />
+                <Popconfirm
+                  onConfirm={() => transferUserToken(obj)}
+                  trigger={"click"}
+                  title={"Are you sure want this token back?"}
+                >
+                  <CustomButton
+                    title={"Withdraw"}
+                    className={"click-btn font-weight-600 letter-spacing-small"}
+                    size="medium"
+                  />
+                </Popconfirm>
               </Flex>
             )}
-            {/* {obj.isToken ? (
-              <Text className={"text-color-one font-small"}>Minted</Text>
-            ) : (
-              <CustomButton
-                className={"click-btn font-weight-600 letter-spacing-small"}
-                title={"Mint"}
-                size="medium"
-                onClick={() => handleTokenMint(obj.tokenId)}
-                menu={{
-                  items: options,
-                  onClick: () => setSupplyModalItems(obj),
-                }}
-              />
-            )} */}
           </Flex>
         );
       },
     },
   ];
-
-  // useEffect(() => {
-  //   (async () => {
-  //     if (activeWallet.length) {
-  //       const options = {
-  //         method: "GET",
-  //         url: `${process.env.REACT_APP_MAGICEDEN_API}/v3/rtp/polygon/users/activity/v6?users=0x864C1509bDd19F36e91Fee9F12473453C856df66&limit=20&sortBy=eventTimestamp&includeMetadata=true`,
-  //         headers: {
-  //           accept: "*/*",
-  //           Authorization: process.env.REACT_APP_MAGICEDEN_BEARER,
-  //         },
-  //       };
-
-  //       const result = await axios.request(options);
-  //       const activities = result.data.activities.filter(
-  //         (activity) => activity.type === "transfer"
-  //       );
-
-  //       const userActivity = activities.filter(
-  //         (activity) =>
-  //           activity.fromAddress.toLowerCase() ===
-  //             "0xe98b997f529f643bc67f217b1270a0f7d7a0ecb2".toLowerCase() &&
-  //           activity.toAddress.toLowerCase() === custodyAddress.toLowerCase()
-  //       );
-  //       const uniqueTokens = userActivity.reduce((map, item) => {
-  //         const { tokenId } = item.token;
-  //         // If tokenId doesn't exist in map or the current item's timestamp is more recent
-  //         if (!map[tokenId] || map[tokenId].timestamp < item.timestamp) {
-  //           map[tokenId] = item; // Update with the more recent entry
-  //         }
-  //         return map;
-  //       }, {});
-  //       console.log(Object.values(uniqueTokens));
-  //       setEthAssets(Object.values(uniqueTokens));
-  //     }
-  //   })();
-  // }, []);
-  console.log("userColl", userCollateral);
 
   return (
     <>
@@ -393,7 +334,7 @@ const DBridge = (props) => {
           <Flex className="page-box" align="center" gap={3}>
             <IoInformationCircleSharp size={25} color="#55AD9B" />
             <Text className="font-small text-color-two">
-              Your ordinal inscription stored in custody address. Address -
+              Your NFT token is stored in custody address. Address -
               <Link to={`https://opensea.io/AbishekJ`} target="_blank">
                 <Tooltip className="link" title={custodyAddress}>
                   {" "}
@@ -405,14 +346,13 @@ const DBridge = (props) => {
                 <PiCopyBold
                   className="pointer"
                   onClick={() => {
-                    navigator.clipboard.writeText(
-                      "bc1pjj4uzw3svyhezxqq7cvqdxzf48kfhklxuahyx8v8u69uqfmt0udqlhwhwz"
-                    );
+                    navigator.clipboard.writeText(custodyAddress);
                   }}
                   size={15}
                 />{" "}
               </Tooltip>
-              Tokens sent will reflect here in 5minutes after they supplied.{" "}
+              Tokens sent will reflect here within a minutes after they are
+              supplied.{" "}
             </Text>
           </Flex>
         </Col>
@@ -438,289 +378,47 @@ const DBridge = (props) => {
         )}
       </Row>
 
-      <Row
-        justify={"space-between"}
-        className="mt-20 pad-bottom-30"
-        gutter={32}
-      >
-        <Col xl={24}>
-          <Row className="m-bottom">
-            <Col xl={24}>
-              <TableComponent
-                locale={{
-                  emptyText: (
-                    <Flex align="center" justify="center" gap={5}>
-                      {!metaAddress ? (
-                        <>
-                          <FaRegSmileWink size={25} />
-                          <span className="font-medium">
-                            Connect any BTC Wallet !
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <ImSad size={25} />
-                          <span className="font-medium">
-                            Seems you have no assets!
-                          </span>
-                        </>
-                      )}
-                    </Flex>
-                  ),
-                }}
-                // loading={
-                //   {
-                //     // spinning: userCollateral === null,
-                //     // indicator: <Bars />,
-                //   }
-                // }
-                pagination={{ pageSize: 5 }}
-                rowKey={(e) => `${e?.token?.tokenId}-${e?.timestamp}`}
-                tableColumns={AssetsToSupplyTableColumns}
-                tableData={userCollateral}
-              />
-            </Col>
-          </Row>
-        </Col>
-      </Row>
-
-      {/* MODAL START */}
-      {/* Asset Details Modal */}
-      <ModalDisplay
-        width={"50%"}
-        title={
-          <Row className="black-bg white-color font-large letter-spacing-small">
-            Details
-          </Row>
-        }
-        footer={null}
-        open={isModalOpen}
-        onOk={handleOk}
-        onCancel={handleCancel}
-      >
-        <Row className="mt-30">
-          <Col md={6}>
-            <Text className="gradient-text-one font-small font-weight-600">
-              Asset Info
-            </Text>
-          </Col>
-          <Col md={18}>
-            <Row>
-              <Col md={12}>
-                {supplyModalItems &&
-                  (supplyModalItems?.mimeType === "text/html" ? (
-                    <iframe
-                      className="border-radius-30"
-                      title={`${supplyModalItems?.id}-borrow_image`}
-                      height={300}
-                      width={300}
-                      src={`${CONTENT_API}/content/${supplyModalItems?.id}`}
-                    />
-                  ) : (
-                    <>
-                      <img
-                        src={`${CONTENT_API}/content/${supplyModalItems?.id}`}
-                        alt={`${supplyModalItems?.id}-borrow_image`}
-                        className="border-radius-30"
-                        width={125}
-                      />
-                      <Row>
-                        <Text className="text-color-one ml">
-                          <span className="font-weight-600 font-small ">
-                            ${" "}
-                          </span>
-                          {(
-                            (Number(supplyModalItems?.collection?.floorPrice) /
-                              BTC_ZERO) *
-                            btcValue
-                          ).toFixed(2)}
-                        </Text>
-                      </Row>
-                    </>
-                  ))}
-              </Col>
-
-              <Col md={12}>
-                <Row>
-                  {" "}
-                  <Flex vertical>
-                    <Text className="text-color-two font-small">
-                      Inscription Number
-                    </Text>
-                    <Text className="text-color-one font-small font-weight-600">
-                      #{supplyModalItems?.inscriptionNumber}
-                    </Text>
-                  </Flex>
-                </Row>
-                <Row>
-                  {" "}
-                  <Flex vertical>
-                    <Text className="text-color-two font-small">
-                      Inscription Id
-                    </Text>
-
-                    <Text className="text-color-one font-small font-weight-600 iconalignment">
-                      {sliceAddress(supplyModalItems?.id, 7)}
-                      <Tooltip
-                        arrow
-                        title={copy}
-                        trigger={"hover"}
-                        placement="top"
-                      >
-                        <MdContentCopy
-                          className="pointer"
-                          onClick={() => {
-                            navigator.clipboard.writeText(supplyModalItems?.id);
-                            setCopy("Copied");
-                            setTimeout(() => {
-                              setCopy("Copy");
-                            }, 2000);
-                          }}
-                          size={20}
-                          color="#764ba2"
-                        />
-                      </Tooltip>
-                    </Text>
-                  </Flex>
-                </Row>
-              </Col>
-            </Row>
-          </Col>
-        </Row>
-
-        <Divider />
-        <Row className="mt-15">
-          <Col md={6}>
-            <Text className="gradient-text-one font-small font-weight-600">
-              Collection Info
-            </Text>
-          </Col>
-          <Col md={18}>
-            <Row justify={"center"}>
-              <Text className="gradient-text-two font-xslarge font-weight-600 ">
-                {Capitalaize(supplyModalItems?.collection?.symbol)}
-              </Text>
-            </Row>
-
-            <Row className="mt-30" justify={"space-between"}>
-              <Flex vertical className="borrowDataStyle">
-                <Text className="text-color-two font-small">Floor Price</Text>
-
-                <Text className="text-color-one font-small font-weight-600">
-                  {supplyModalItems?.collection.floorPrice / BTC_ZERO}
-                </Text>
-              </Flex>
-              <Flex vertical className="borrowDataStyle">
-                <Text className="text-color-two font-small">Total Listed</Text>
-
-                <Text className="text-color-one font-small font-weight-600">
-                  {supplyModalItems?.collection.totalListed}
-                </Text>
-              </Flex>
-              <Flex vertical className="borrowDataStyle">
-                <Text className="text-color-two font-small">Total Volume</Text>
-
-                <Text className="text-color-one font-small font-weight-600">
-                  {supplyModalItems?.collection.totalVolume}
-                </Text>
-              </Flex>
-            </Row>
-
-            <Row justify={"space-between"} className="m-25">
-              <Flex vertical>
-                <Text className="text-color-two font-small">Owners</Text>
-
-                <Row justify={"center"}>
-                  <Text className="text-color-one font-small font-weight-600">
-                    {supplyModalItems?.collection.owners}
-                  </Text>
-                </Row>
-              </Flex>
-              <Flex vertical>
-                <Text className="text-color-two font-small ">
-                  Pending Transactions
-                </Text>
-                <Row justify={"center"}>
-                  <Text className="text-color-one font-small font-weight-600">
-                    {supplyModalItems?.collection.pendingTransactions}
-                  </Text>
-                </Row>
-              </Flex>
-              <Flex vertical>
-                <Text className="text-color-two font-small">Supply</Text>
-                <Row justify={"center"}>
-                  <Text className="text-color-one font-small font-weight-600">
-                    {supplyModalItems?.collection.supply}
-                  </Text>
-                </Row>
-              </Flex>
-            </Row>
-          </Col>
-        </Row>
-      </ModalDisplay>
-
-      {/* Custody supply address display */}
-      <ModalDisplay
-        width={"25%"}
-        open={handleSupplyModal}
-        onCancel={handleCancel}
-        onOk={handleOk}
-        footer={null}
-      >
-        <Row justify={"center"}>
-          <IoWarningSharp size={50} color="#f46d6d" />
-        </Row>
-        <Row justify={"center"}>
-          <Text className="text-color-one font-xlarge font-weight-600 m-25">
-            Reserved Address
-          </Text>
-        </Row>
-        <Row>
-          <span className="text-color-two mt-15">
-            This is the token reserved contract address, please do not transfer
-            directly through the CEX, you will not be able to confirm the source
-            of funds, and you will not be responsible for lost funds.
-          </span>
-        </Row>
+      {activeWallet.length ? (
         <Row
-          justify={"space-around"}
-          align={"middle"}
-          className="mt-30  border "
+          justify={"space-between"}
+          className="mt-20 pad-bottom-30"
+          gutter={32}
         >
-          <Col md={18}>
-            <span className="text-color-two">
-              bc1pjj4uzw3svyhezxqq7cvqdxzf48kfhklxuahyx8v8u69uqfmt0udqlhwhwz
-            </span>
-          </Col>
-          <Col md={3}>
-            <Row justify={"end"}>
-              <Tooltip arrow title={copy} trigger={"hover"} placement="top">
-                <MdContentCopy
-                  className="pointer"
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      "bc1pjj4uzw3svyhezxqq7cvqdxzf48kfhklxuahyx8v8u69uqfmt0udqlhwhwz"
-                    );
-                    setCopy("Copied");
-                    setTimeout(() => {
-                      setCopy("Copy");
-                    }, 2000);
+          <Col xl={24}>
+            <Row className="m-bottom">
+              <Col xl={24}>
+                <TableComponent
+                  locale={{
+                    emptyText: (
+                      <Flex align="center" justify="center" gap={5}>
+                        <ImSad size={25} />
+                        <span className="font-medium">
+                          Seems you have no tokens!
+                        </span>
+                      </Flex>
+                    ),
                   }}
-                  size={20}
-                  color="#764ba2"
+                  loading={{
+                    spinning: userCollateral === null,
+                    indicator: <Bars />,
+                  }}
+                  pagination={{ pageSize: 5 }}
+                  rowKey={(e) => `${e?.token?.tokenId}-${e?.timestamp}`}
+                  tableColumns={AssetsToSupplyTableColumns}
+                  tableData={userCollateral}
                 />
-              </Tooltip>
+              </Col>
             </Row>
           </Col>
         </Row>
-        <Row>
-          <CustomButton
-            onClick={handleCancel}
-            title="I Know"
-            className={"m-25 width background text-color-one "}
-          />
+      ) : (
+        <Row
+          justify={"center"}
+          className="gradient-text-two font-large font-weight-600 mt-150"
+        >
+          Connect Metamask Wallet!
         </Row>
-      </ModalDisplay>
+      )}
     </>
   );
 };

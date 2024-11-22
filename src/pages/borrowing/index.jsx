@@ -45,11 +45,10 @@ const Borrowing = (props) => {
   const activeWallet = reduxState.wallet.active;
   const borrowCollateral = reduxState.constant.borrowCollateral;
   const allBorrowRequest = reduxState.constant.allBorrowRequest;
-  // console.log("borrowCollateral", borrowCollateral);
 
   const metaAddress = reduxState.wallet.meta.address;
 
-  const ethvalue = reduxState.constant.ethvalue;
+  const chainvalue = reduxState.constant.chainvalue;
   const coinValue = reduxState.constant.coinValue;
 
   const { Text } = Typography;
@@ -60,14 +59,12 @@ const Borrowing = (props) => {
   const [collateralData, setCollateralData] = useState(null);
   const [offerModalData, setOfferModalData] = useState({});
   const [isOffersModal, setIsOffersModal] = useState(false);
-  console.log("collateralData", collateralData);
 
   const [isLendModal, setIsLendModal] = useState(false);
   const [lendModalData, setLendModalData] = useState({});
 
   const [isBorrowModal, setIsBorrowModal] = useState(false);
   const [borrowModalData, setBorrowModalData] = useState({});
-  console.log("borrowModalData", borrowModalData);
 
   const [collapseActiveKey, setCollapseActiveKey] = useState(["2"]);
   const [isRequestBtnLoading, setIsRequestBtnLoading] = useState(false);
@@ -216,7 +213,7 @@ const Borrowing = (props) => {
           Number(obj?.floorAsk?.price?.amount?.decimal)
             ? Number(obj?.floorAsk?.price?.amount?.decimal)
             : 0.0035,
-          ethvalue,
+          chainvalue,
           coinValue
         );
         return (
@@ -254,13 +251,13 @@ const Borrowing = (props) => {
                 : 0.0035;
               const floorPrice = calculateOrdinalInCrypto(
                 floor,
-                ethvalue,
+                chainvalue,
                 coinValue
               ).ordinalIncrypto;
 
               // Assets
               let assets = collateralData?.filter(
-                (p) => p.collection.name === obj.name
+                (c) => c.collection.collectionName === obj.name
               );
               // Terms
               const term = Number(obj.terms);
@@ -307,6 +304,9 @@ const Borrowing = (props) => {
       },
     },
   ];
+  // console.log("collateralData", collateralData);
+  // console.log("borrowModalData", borrowModalData);
+  // console.log("approvedCollections", approvedCollections);
 
   const toggleBorrowModal = () => {
     setIsBorrowModal(!isBorrowModal);
@@ -356,7 +356,7 @@ const Borrowing = (props) => {
         return new Promise(async (res) => {
           const result = await borrowContract.getBorrowRequestByTokenId(
             TokenContractAddress,
-            asset.tokenId
+            asset.token.tokenId
           );
           res({
             ...asset,
@@ -413,7 +413,7 @@ const Borrowing = (props) => {
           const requestResult = await borrowContract.createBorrowRequest(
             TokenContractAddress,
             borrowModalData.collateral.contract,
-            borrowModalData.collateral.tokenId,
+            borrowModalData.collateral.token.tokenId,
             borrowModalData.terms,
             Wei_loanAmount,
             Wei_repayAmount,
@@ -522,8 +522,6 @@ const Borrowing = (props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWallet]);
 
-  // console.log("isBorrowApproved", isBorrowApproved);
-  // console.log("borrowModalData", borrowModalData);
   return (
     <>
       <Row justify={"space-between"} align={"middle"}>
@@ -847,7 +845,10 @@ const Borrowing = (props) => {
           {borrowModalData?.assets?.length ? (
             <>
               {borrowModalData.assets?.map((asset) => {
-                const { contract, tokenId, id } = asset;
+                const {
+                  contract,
+                  token: { tokenId },
+                } = asset;
                 return (
                   <Col
                     md={6}
@@ -862,7 +863,7 @@ const Borrowing = (props) => {
                         }))
                       }
                       className={`selection-css pointer ${
-                        tokenId === borrowModalData?.collateral?.tokenId
+                        tokenId === borrowModalData?.collateral?.token?.tokenId
                           ? true
                             ? "selected-dark card-selected"
                             : "selected-light card-selected light-color-primary"
@@ -871,7 +872,7 @@ const Borrowing = (props) => {
                           : "card-unselected light-color-primary"
                       }`}
                     >
-                      {tokenId === borrowModalData?.collateral?.tokenId
+                      {tokenId === borrowModalData?.collateral?.token?.tokenId
                         ? "Selected"
                         : "Select"}
                     </div>
@@ -885,7 +886,7 @@ const Borrowing = (props) => {
                         }))
                       }
                       className={`themed-card-dark ${
-                        id === borrowModalData?.collateral?.id
+                        tokenId === borrowModalData?.collateral?.token.tokenId
                           ? true
                             ? "card-box-shadow-dark"
                             : "card-box-shadow-light"
@@ -897,7 +898,7 @@ const Borrowing = (props) => {
                           width={"50px"}
                           height={"110px"}
                           alt={"collection_images"}
-                          src={asset?.image}
+                          src={asset?.token?.tokenImage}
                           onError={(e) =>
                             (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
                           }
@@ -908,7 +909,7 @@ const Borrowing = (props) => {
                         <span
                           className={`font-xsmall text-color-two letter-spacing-small`}
                         >
-                          #{asset.tokenId}{" "}
+                          #{asset?.token?.tokenId}{" "}
                         </span>
                       </Flex>
                     </CardDisplay>
@@ -918,11 +919,7 @@ const Borrowing = (props) => {
             </>
           ) : (
             <Text className={`text-color-two font-small letter-spacing-small`}>
-              {borrowCollateral === null && activeWallet.length === 2
-                ? "Please wait until fetching your assets!"
-                : borrowCollateral === null
-                ? "Connect BTC wallet to see your assets!."
-                : "You don't have any collateral for this collection!."}
+              You don't have any collateral for this collection!.
             </Text>
           )}
         </Row>
@@ -1171,7 +1168,9 @@ const Borrowing = (props) => {
               <CustomButton
                 block
                 loading={isRequestBtnLoading}
-                disabled={isBorrowApproved === null}
+                disabled={
+                  isBorrowApproved === null || !borrowModalData?.assets?.length
+                }
                 className="click-btn font-weight-600 letter-spacing-small"
                 title={isBorrowApproved ? "Create request" : "Approve request"}
                 onClick={() => {

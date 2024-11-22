@@ -7,8 +7,6 @@ import { useSelector } from "react-redux";
 import Bitcoin from "../../assets/coin_logo/edu_coin.png";
 import borrowJson from "../../utils/borrow_abi.json";
 import {
-  API_METHODS,
-  apiUrl,
   BorrowContractAddress,
   TokenContractAddress,
 } from "../../utils/common";
@@ -24,6 +22,7 @@ const LendModal = ({
   toggleLendModal,
   setLendModalData,
   collapseActiveKey,
+  getAllBorrowRequests,
   setCollapseActiveKey,
 }) => {
   const { Text } = Typography;
@@ -78,36 +77,25 @@ const LendModal = ({
 
       if (acceptLoan.hash) {
         Notify("success", "Lending success");
+        await getAllBorrowRequests();
         toggleLendModal();
       }
 
       setIsOfferBtnLoading(false);
     } catch (error) {
       setIsOfferBtnLoading(false);
-      console.log("Accept req error", error.message);
+
       if (error.message.includes("Loan amount does not match")) {
         Notify("warning", "Loan amount does not match");
       } else if (error.message.includes("This borrow request is not active")) {
         Notify("warning", "This borrow request is not active");
       } else if (error.message.includes("Borrower does not own this NFT")) {
         Notify("warning", "Borrower does not own this NFT");
+      } else if (error.data.message.includes("insufficient funds for gas")) {
+        Notify("warning", "Insufficient funds for gas");
       }
     }
   };
-
-  useEffect(() => {
-    (async () => {
-      if (Number(lendModalData.tokenId) && !lendModalData.asset) {
-        const result = await API_METHODS.get(
-          `${apiUrl.Asset_server_base_url}/api/v2/fetch/inscription/${Number(
-            lendModalData.tokenId
-          )}`
-        );
-        setLendModalData({ ...lendModalData, asset: result.data.data.data });
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lendModalData]);
 
   return (
     <ModalDisplay
@@ -115,12 +103,14 @@ const LendModal = ({
       title={
         <Flex align="center" gap={5} justify="start">
           <Text className={`font-size-20 text-color-one letter-spacing-small`}>
-            {lendModalData.collectionName}{" "}
+            {lendModalData?.collectionName}{" "}
             <Link
               target="_blank"
-              to={`https://magiceden.io/ordinals/item-details/${lendModalData?.asset?.inscription_id}`}
+              to={`https://opensea.io/assets/matic/${
+                lendModalData?.id
+              }/${Number(lendModalData?.tokenId)}`}
             >
-              #{Number(lendModalData.tokenId)}
+              #{Number(lendModalData?.tokenId)}
             </Link>
           </Text>
         </Flex>
@@ -132,24 +122,15 @@ const LendModal = ({
       {/* Lend Image Display */}
       <Row justify={"space-between"} className="mt-30">
         <Col md={4}>
-          {lendModalData?.asset?.mimeType === "text/html" ? (
-            <iframe
-              className="border-radius-8 pointer"
-              title={`Iframe`}
-              height={70}
-              width={70}
-              onError={(e) => (e.target.src = lendModalData.thumbnailURI)}
-              src={`${process.env.REACT_APP_ORDINALS_CONTENT_API}/content/${lendModalData?.asset?.inscription_id}`}
-            />
-          ) : (
-            <img
-              width={70}
-              alt="withdraw_img"
-              onError={(e) => (e.target.src = lendModalData.thumbnailURI)}
-              className="border-radius-8"
-              src={`${process.env.REACT_APP_ORDINALS_CONTENT_API}/content/${lendModalData?.asset?.inscription_id}`}
-            />
-          )}
+          <img
+            width={70}
+            alt="withdraw_img"
+            src={lendModalData.thumbnailURI}
+            className="border-radius-8"
+            onError={(e) =>
+              (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
+            }
+          />
         </Col>
 
         <Col md={5}>

@@ -1,7 +1,4 @@
-import { AptosWalletAdapterProvider } from "@aptos-labs/wallet-adapter-react";
-import { WalletStandardProvider } from "@wallet-standard/react";
-import { PetraWallet } from "petra-plugin-wallet-adapter";
-import React from "react";
+import React, { useEffect } from "react";
 import { Provider } from "react-redux";
 import { BrowserRouter as Router } from "react-router-dom";
 import { PersistGate } from "redux-persist/integration/react";
@@ -9,24 +6,26 @@ import LoadingWrapper from "../component/loading-wrapper";
 import store, { persistor } from "../redux/store";
 import "./../App.css";
 import MainLayout from "./layout";
+import { initJuno } from "@junobuild/core";
 
 const App = () => {
-  const wallets = [new PetraWallet()];
+  useEffect(() => {
+    (async () =>
+      await initJuno({
+        satelliteId: "aa25u-wiaaa-aaaal-arrgq-cai",
+      }))();
+  }, []);
 
   return (
     <React.Fragment>
       <Provider store={store}>
-        <AptosWalletAdapterProvider plugins={wallets} autoConnect={true}>
-          <PersistGate loading={null} persistor={persistor}>
-            <LoadingWrapper>
-              <Router>
-                <WalletStandardProvider>
-                  <MainLayout />
-                </WalletStandardProvider>
-              </Router>
-            </LoadingWrapper>
-          </PersistGate>
-        </AptosWalletAdapterProvider>
+        <PersistGate loading={null} persistor={persistor}>
+          <LoadingWrapper>
+            <Router>
+              <MainLayout />
+            </Router>
+          </LoadingWrapper>
+        </PersistGate>
       </Provider>
     </React.Fragment>
   );
