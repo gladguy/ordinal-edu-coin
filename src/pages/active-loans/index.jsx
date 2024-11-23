@@ -1,73 +1,32 @@
-import { Col, Flex, Row, Typography } from "antd";
+import { Col, Flex, Radio, Row, Typography } from "antd";
 import Link from "antd/es/typography/Link";
 import { ethers } from "ethers";
-import _ from "lodash";
 import { useEffect, useState } from "react";
 import { IoInformationCircleSharp } from "react-icons/io5";
 import { MdOutlineConfirmationNumber } from "react-icons/md";
 import { ThreeDots } from "react-loading-icons";
-import CustomButton from "../../component/Button";
 import { propsContainer } from "../../container/props-container";
 import {
   API_METHODS,
   apiUrl,
   BorrowContractAddress,
+  custodyAddress,
   TokenContractAddress,
 } from "../../utils/common";
 import tokenAbiJson from "../../utils/tokens_abi.json";
 
 const ActiveLoans = (props) => {
-  const { Text, Title } = Typography;
+  const { Text } = Typography;
   const { reduxState } = props.redux;
+  const { fetchUserAssets } = props.wallet;
   const walletState = reduxState.wallet;
-
-  const CONTENT_API = process.env.REACT_APP_ORDINALS_CONTENT_API;
 
   const approvedCollections = reduxState.constant.approvedCollections;
   const { active } = walletState;
 
+  const [radioBtn, setRadioBtn] = useState("Custody");
   const [contractTokens, setContractTokens] = useState(null);
-  const [collateralCount, setCollateralCount] = useState(0);
-  const [collectionName, setCollectionName] = useState("");
-
-  const getCollectionDetails = async (filteredData) => {
-    try {
-      const isFromApprovedAssets = filteredData.map(async (asset) => {
-        return new Promise(async (resolve) => {
-          const result = await API_METHODS.get(
-            `${apiUrl.Asset_server_base_url}/api/v2/fetch/asset/${asset.inscription_id}`
-          );
-          resolve(...result.data?.data?.tokens);
-        });
-      });
-      const revealedPromise = await Promise.all(isFromApprovedAssets);
-      let collectionSymbols = {};
-      approvedCollections.forEach(
-        (collection) =>
-          (collectionSymbols = {
-            ...collectionSymbols,
-            [collection.symbol]: collection,
-          })
-      );
-      const collectionNames = approvedCollections.map(
-        (collection) => collection.symbol
-      );
-      const isFromApprovedCollections = revealedPromise.filter((assets) =>
-        collectionNames.includes(assets.collectionSymbol)
-      );
-
-      const finalPromise = isFromApprovedCollections.map((asset) => {
-        const collection = collectionSymbols[asset.collectionSymbol];
-        return {
-          ...asset,
-          collection,
-        };
-      });
-      return finalPromise;
-    } catch (error) {
-      console.log("getCollectionDetails error", error);
-    }
-  };
+  const [custodyTokens, setCustodyTokens] = useState(null);
 
   const getContractCollaterals = async () => {
     try {
@@ -80,32 +39,31 @@ const ActiveLoans = (props) => {
         signer
       );
 
-      const result = await contract.tokensOfOwner(BorrowContractAddress);
-      const tokensArray = result.map((token) => Number(token.toString()));
+      const tokens = await contract.tokensOfOwner(BorrowContractAddress);
+      const tokensArray = tokens.map((token) => Number(token.toString()));
 
-      const promises = tokensArray.map((token) => {
+      const contractPromise = tokensArray.map((tokenId) => {
         return new Promise(async (res) => {
-          const result = await API_METHODS.get(
-            `${apiUrl.Asset_server_base_url}/api/v2/fetch/inscription/${token}`
-          );
-          res(result.data.data.data);
+          const contractId = await contract.tokenContractByID(tokenId);
+          res({ contractId, tokenId });
         });
       });
 
-      const revealed = await Promise.all(promises);
-      const finalPromise = await getCollectionDetails(revealed);
+      const promiseResult = await Promise.all(contractPromise);
 
-      const grouped = _.groupBy(finalPromise, "collectionSymbol");
-
-      const data = Object.values(grouped).map((col) => col.length);
-
-      let collateral = 0;
-      data.forEach((data) => {
-        collateral = collateral + data;
+      let string = "";
+      promiseResult.forEach((token) => {
+        string = string + `tokens=${token.contractId}%3A${token.tokenId}&`;
       });
-      setCollateralCount(collateral);
 
-      setContractTokens(grouped);
+      const result = await API_METHODS.post(
+        `${apiUrl.Asset_server_base_url}/api/v1/get/tokens`,
+        {
+          string,
+        }
+      );
+
+      setContractTokens(result.data.tokens);
     } catch (error) {
       console.log("Collateral fetching error", error);
       if (error.message.includes("No NFT found")) {
@@ -120,6 +78,14 @@ const ActiveLoans = (props) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, approvedCollections]);
+
+  useEffect(() => {
+    (async () => {
+      const custodyTokens = await fetchUserAssets(custodyAddress);
+      setCustodyTokens(custodyTokens);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
@@ -145,10 +111,36 @@ const ActiveLoans = (props) => {
         </Col>
       </Row>
 
+      <Row justify={"center"}>
+        <Col>
+          <Radio.Group
+            className="radio-css mt-30"
+            options={[
+              {
+                label: "On Custody",
+                value: "Custody",
+              },
+              {
+                label: "As Collateral",
+                value: "Collaterals",
+              },
+            ]}
+            onChange={({ target: { value } }) => {
+              setRadioBtn(value);
+            }}
+            value={radioBtn}
+            size="large"
+            buttonStyle="solid"
+            optionType="button"
+          />
+        </Col>
+      </Row>
+
       <Row justify={"start"} gutter={12} className="mt-30">
-        <Col md={4}>
+        <Col md={5}>
           <Flex
             vertical
+            gap={15}
             className={`cards-css grey-bg-color pointer card-box-shadow-light`}
             justify="space-between"
           >
@@ -156,7 +148,7 @@ const ActiveLoans = (props) => {
               <Text
                 className={`gradient-text-one font-small letter-spacing-small`}
               >
-                Collateral Count
+                {radioBtn === "Custody" ? "Bridged Tokens" : "Collateral"} Count
               </Text>
               <MdOutlineConfirmationNumber size={25} color={"grey"} />
             </Flex>
@@ -165,127 +157,75 @@ const ActiveLoans = (props) => {
               align="center"
               className={`text-color-two font-small letter-spacing-small`}
             >
-              #{collateralCount}
+              #
+              {radioBtn === "Custody"
+                ? custodyTokens?.length
+                : contractTokens?.length}
             </Flex>
           </Flex>
         </Col>
       </Row>
 
-      {/* Collaterals */}
-      <Row justify={"space-between"} className="mt-5" align={"middle"}>
-        <Title level={3} className={"gradient-text-one"}>
-          Collaterals
-        </Title>
-
-        {collectionName ? (
-          <CustomButton
-            className="click-btn font-weight-600 letter-spacing-small"
-            onClick={() => setCollectionName("")}
-            title={"Back"}
-          />
-        ) : (
-          ""
-        )}
-      </Row>
-
-      {collectionName ? (
+      {radioBtn === "Custody" ? (
         <Row
-          className="mt-15 pad-bottom-30"
-          justify={contractTokens === null ? "center" : "start"}
+          className="mt-30 pad-bottom-30 margin-bottom"
+          justify={custodyTokens === null ? "center" : "start"}
           gutter={[32, 32]}
         >
-          {contractTokens[collectionName].map((asset) => {
-            const { id, collectionName, inscriptionNumber } = asset;
-            return (
-              <Col key={`${id}-${collectionName}`} md={3} className="zoom">
-                <Row
-                  gutter={[12, 12]}
-                  justify={"space-between"}
-                  className={`border-color-ash border-radius-8 border-padding-medium pointer`}
-                >
-                  <Col md={24}>
-                    <Flex vertical gap={5}>
-                      <img
-                        className="border-radius-5"
-                        src={`${CONTENT_API}/content/${asset.id}`}
-                        alt="asset_cards"
-                        width={140}
-                      />
-
-                      <Text
-                        className={`text-color-one font-small letter-spacing-small d-flex-all-center`}
-                      >
-                        {collectionName === "Rune Specific Internet Canisters"
-                          ? "RSIC"
-                          : collectionName}
-                      </Text>
-
-                      <Text
-                        className={`text-color-one font-small letter-spacing-small page-box box-padding-one border-radius-5 d-flex-all-center`}
-                      >
-                        #{inscriptionNumber}
-                      </Text>
-                    </Flex>
-                  </Col>
-                </Row>
-              </Col>
-            );
-          })}
-        </Row>
-      ) : (
-        <Row
-          className={`margin-bottom ${
-            contractTokens === null ? "mt-90" : "mt-15"
-          }`}
-          justify={contractTokens === null ? "center" : "start"}
-          gutter={[32, 32]}
-        >
-          {contractTokens === null ? (
+          {custodyTokens === null ? (
             <ThreeDots stroke="#6a85f1" alignmentBaseline="central" />
           ) : (
             <>
-              {Object?.keys(contractTokens)?.length ? (
+              {Object?.keys(custodyTokens)?.length ? (
                 <>
-                  {Object?.entries(contractTokens)?.map((asset, index) => {
-                    const [collectionName, assets] = asset;
-                    const [_one] = assets;
-
+                  {custodyTokens.map((token, index) => {
+                    const image =
+                      token?.collection?.name === "Polygon Ape: The Mutation"
+                        ? "https://klekshun.com/_next/static/media/mutation.dc426f61.jpg"
+                        : token.image;
                     return (
-                      <>
-                        <Col
-                          key={`${collectionName}-${index}-${Math.random()}`}
-                          md={4}
-                          onClick={() => setCollectionName(collectionName)}
+                      <Col
+                        key={`${
+                          token?.collection?.name
+                        }-${index}-${Math.random()}`}
+                        md={4}
+                      >
+                        <Row
+                          className={`border-color-ash pointer border-radius-8 border-padding-medium`}
                         >
-                          <Row
-                            className={`border-color-ash pointer border-radius-8 border-padding-medium`}
-                          >
-                            <Col md={24}>
-                              <Flex vertical>
-                                <img
-                                  className="border-radius-5"
-                                  src={_one.collection.imageURI}
-                                  alt="asset_cards"
-                                  width={"auto"}
-                                />
-                                <Text
-                                  className={`stamp text-color-one mt-7 font-small letter-spacing-small page-box box-padding-one border-radius-5 d-flex-all-center`}
-                                >
-                                  {collectionName ===
-                                  "Rune Specific Internet Canisters"
-                                    ? "RSIC"
-                                    : collectionName}
-                                </Text>
-                                <Text
-                                  className={`text-color-one font-small mt-5 letter-spacing-small page-box box-padding-one border-radius-5 d-flex-all-center`}
-                                >
-                                  Count - #{assets?.length}
-                                </Text>
-                              </Flex>
-                            </Col>
-                          </Row>
-                        </Col>
-                      </>
+                          <Col md={24}>
+                            <Flex vertical>
+                              <img
+                                className="border-radius-5"
+                                src={
+                                  image ||
+                                  "https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format"
+                                }
+                                alt="token_cards"
+                                width={"auto"}
+                                onError={(e) => {
+                                  e.target.src =
+                                    "https://miro.medium.com/v2/resize:fit:1150/1*AC9frN1qFnn-I2JCycN8fw.png";
+                                  e.target.srcset =
+                                    "https://miro.medium.com/v2/resize:fit:1150/1*AC9frN1qFnn-I2JCycN8fw.png";
+                                  e.target.onerror = null;
+                                }}
+                                srcSet={token?.image}
+                              />
+                              <Text
+                                className={`stamp text-color-one mt-7 font-small letter-spacing-small page-box box-padding-one border-radius-5 d-flex-all-center`}
+                              >
+                                {token?.collection?.name}
+                              </Text>
+                              <Text
+                                className={`text-color-one font-xsmall mt-5 letter-spacing-small page-box box-padding-one border-radius-5 d-flex-all-center`}
+                              >
+                                Token #{token?.tokenId}
+                              </Text>
+                            </Flex>
+                          </Col>
+                        </Row>
+                      </Col>
                     );
                   })}
                 </>
@@ -293,12 +233,79 @@ const ActiveLoans = (props) => {
                 <Text
                   className={`text-color-one mt-7 font-small letter-spacing-small box-padding-one border-radius-5 d-flex-all-center`}
                 >
-                  No collateral found
+                  No tokens found
                 </Text>
               )}
             </>
           )}
         </Row>
+      ) : (
+        <>
+          <Row
+            className={`margin-bottom ${
+              contractTokens === null ? "mt-90" : "mt-30"
+            }`}
+            justify={contractTokens === null ? "center" : "start"}
+            gutter={[32, 32]}
+          >
+            {contractTokens === null ? (
+              <ThreeDots stroke="#6a85f1" alignmentBaseline="central" />
+            ) : (
+              <>
+                {contractTokens?.length ? (
+                  <>
+                    {contractTokens?.map((asset, index) => {
+                      const { token } = asset;
+                      const { collection } = token;
+                      return (
+                        <>
+                          <Col
+                            key={`${token?.tokenId}-${index}-${Math.random()}`}
+                            md={4}
+                          >
+                            <Row
+                              className={`border-color-ash pointer border-radius-8 border-padding-medium`}
+                            >
+                              <Col md={24}>
+                                <Flex vertical>
+                                  <img
+                                    className="border-radius-5"
+                                    src={
+                                      token?.image ||
+                                      "https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format"
+                                    }
+                                    alt="asset_cards"
+                                    width={"auto"}
+                                  />
+                                  <Text
+                                    className={`stamp text-color-one mt-7 font-small letter-spacing-small page-box box-padding-one border-radius-5 d-flex-all-center`}
+                                  >
+                                    {collection?.name}
+                                  </Text>
+                                  <Text
+                                    className={`text-color-one font-small mt-5 letter-spacing-small page-box box-padding-one border-radius-5 d-flex-all-center`}
+                                  >
+                                    Token #{token?.tokenId}
+                                  </Text>
+                                </Flex>
+                              </Col>
+                            </Row>
+                          </Col>
+                        </>
+                      );
+                    })}
+                  </>
+                ) : (
+                  <Text
+                    className={`text-color-one mt-7 font-small letter-spacing-small box-padding-one border-radius-5 d-flex-all-center`}
+                  >
+                    No collateral found
+                  </Text>
+                )}
+              </>
+            )}
+          </Row>
+        </>
       )}
     </>
   );

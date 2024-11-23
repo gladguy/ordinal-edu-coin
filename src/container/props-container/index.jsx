@@ -66,23 +66,21 @@ export const propsContainer = (Component) => {
 
     const chainPrice = async () => {
       const chainData = await API_METHODS.get(
-        `https://api.coinlayer.com/api/live?access_key=61858072d88e8fee2d8859471417c64b&symbols=POLY`
+        `${apiUrl.Asset_server_base_url}/api/v1/fetch/Polygon`
       );
-      // console.log("chainData", chainData);
-
       return chainData;
     };
 
     const fetchChainLiveValue = async () => {
       try {
-        // const chainData = await chainPrice();
-        // if (chainData.data.rates["POLY"]) {
-        //   const ChainValue = chainData.data.rates["POLY"];
-        //   dispatch(setChainValue(ChainValue));
-        // } else {
-        //   // fetchChainLiveValue();
-        // }
-        dispatch(setChainValue(0.45));
+        const chainData = await chainPrice();
+        if (chainData.data.data["matic-network"]) {
+          const ChainValue = chainData.data.data["matic-network"].usd;
+          dispatch(setChainValue(ChainValue));
+        } else {
+          // fetchChainLiveValue();
+          // dispatch(setChainValue(0.45));
+        }
       } catch (error) {
         // Notify("error", "Failed to fetch ckBtc");
       }
@@ -329,52 +327,67 @@ export const propsContainer = (Component) => {
 
     const fetchCoinPrice = async () => {
       try {
-        // const coinData = await API_METHODS.get(
-        //   `https://api.coinlayer.com/api/live?access_key=61858072d88e8fee2d8859471417c64b&symbols=POLY`
-        // );
-
-        // if (coinData.data.rates["edu-coin"]) {
-        //   const coinValue = coinData.data.rates["edu-coin"];
-        //   dispatch(setCoinValue(coinValue));
-        // } else {
-        //   // fetchCoinPrice();
-        dispatch(setCoinValue(0.51));
-        // }
+        const coinData = await API_METHODS.get(
+          `${apiUrl.Asset_server_base_url}/api/v1/fetch/EduPrice`
+        );
+        if (coinData.data.data["edu-coin"]) {
+          const coinValue = coinData.data.data["edu-coin"].usd;
+          dispatch(setCoinValue(coinValue));
+        } else {
+          // fetchCoinPrice();
+          // dispatch(setCoinValue(0.51));
+        }
       } catch (error) {
         // Notify("error", "Failed to fetch Aptos");
       }
     };
 
-    const fetchUserAssets = async () => {
+    const fetchUserAssets = async (address) => {
       let config = {
         method: "GET",
-        url: `${apiUrl.Asset_server_base_url}/api/v1/user/tokens/${metaAddress}?chain=polygon`,
+        url: `${apiUrl.Asset_server_base_url}/api/v1/user/tokens/${
+          address ? address : metaAddress
+        }?chain=polygon`,
       };
 
-      axios
-        .request(config)
-        .then((response) => {
-          const isSpamFilter = response.data.tokens.filter(
-            (collection) => !collection.token.collection.isSpam
-          );
+      try {
+        const response = await axios.request(config);
 
-          const result = isSpamFilter.map((collection) => {
-            return {
-              ...collection.token,
-            };
-          });
-          dispatch(setUserAssets(result));
-        })
-        .catch((error) => {
-          console.log(error);
+        const isSpamFilter = response.data.tokens.filter(
+          (collection) => !collection.token.collection.isSpam
+        );
+
+        const result = isSpamFilter.map((collection) => {
+          return {
+            ...collection.token,
+          };
         });
+
+        if (address) {
+          return result;
+        } else {
+          dispatch(setUserAssets(result));
+        }
+      } catch (error) {
+        console.log(error);
+      }
     };
 
     useEffect(() => {
       (() => {
         setInterval(async () => {
           fetchCoinPrice();
-        }, [300000]);
+        }, [30000]);
+        return () => clearInterval();
+      })();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [api_agent, dispatch]);
+
+    useEffect(() => {
+      (() => {
+        setInterval(async () => {
+          fetchChainLiveValue();
+        }, [30000]);
         return () => clearInterval();
       })();
       // eslint-disable-next-line react-hooks/exhaustive-deps
