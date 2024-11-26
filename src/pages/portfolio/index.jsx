@@ -168,25 +168,31 @@ const Portfolio = (props) => {
       title: "Asset",
       align: "center",
       dataIndex: "asset",
-      render: (_, obj) => (
-        <>
-          <Flex gap={5} vertical align="center">
-            <img
-              src={obj.image}
-              alt={`${obj.id}-borrow_image`}
-              className="border-radius-30"
-              onError={(e) =>
-                (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
-              }
-              width={70}
-              height={70}
-            />
-            <Text className="text-color-one font-xsmall letter-spacing-small">
-              {obj.name}
-            </Text>
-          </Flex>
-        </>
-      ),
+      render: (_, obj) => {
+        const image =
+          obj?.collection?.name === "Polygon Ape: The Mutation"
+            ? "https://klekshun.com/_next/static/media/mutation.dc426f61.jpg"
+            : obj.image;
+        return (
+          <>
+            <Flex gap={5} vertical align="center">
+              <img
+                src={image}
+                alt={`${obj.id}-borrow_image`}
+                className="border-radius-30"
+                onError={(e) =>
+                  (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
+                }
+                width={70}
+                height={70}
+              />
+              <Text className="text-color-one font-xsmall letter-spacing-small">
+                {obj.name || obj?.collection?.name}
+              </Text>
+            </Flex>
+          </>
+        );
+      },
     },
     {
       key: "Floor Price",
@@ -454,7 +460,7 @@ const Portfolio = (props) => {
         _loanAmount.toString(),
         "ether"
       ); // 1 Core, with 18 decimals
-      console.log("obj", Wei_loanAmount, Wei_loanAmount + 1);
+      // console.log("obj", Wei_loanAmount, Wei_loanAmount + 1);
 
       const requestResult = await borrowContract.loanRepayment(
         nftContract,
@@ -841,7 +847,12 @@ const Portfolio = (props) => {
                   <>
                     <Flex gap={5} vertical align="center">
                       <img
-                        src={supplyModalItems.image}
+                        src={
+                          supplyModalItems?.collection?.name ===
+                          "Polygon Ape: The Mutation"
+                            ? "https://klekshun.com/_next/static/media/mutation.dc426f61.jpg"
+                            : supplyModalItems.image
+                        }
                         alt={`${supplyModalItems.id}-borrow_image`}
                         onError={(e) =>
                           (e.target.src = `https://i.seadn.io/s/raw/files/b1ee9db8f2a902b373d189f2c279d81d.png?w=500&auto=format`)
@@ -931,7 +942,9 @@ const Portfolio = (props) => {
                 <Text className="text-color-two font-small">Token Count</Text>
 
                 <Text className="text-color-one font-small font-weight-600">
-                  {supplyModalItems?.collection?.tokenCount}
+                  {supplyModalItems?.collection?.tokenCount
+                    ? supplyModalItems?.collection?.tokenCount
+                    : "-"}
                 </Text>
               </Flex>
               <Flex vertical className="borrowDataStyle">
@@ -940,7 +953,7 @@ const Portfolio = (props) => {
                 <Text className="text-color-one font-small font-weight-600">
                   {supplyModalItems?.collection?.volume?.allTime
                     ? supplyModalItems?.collection?.volume?.allTime
-                    : 0}
+                    : "-"}
                 </Text>
               </Flex>
             </Row>
@@ -951,7 +964,9 @@ const Portfolio = (props) => {
 
                 <Row justify={"center"}>
                   <Text className="text-color-one font-small font-weight-600">
-                    {supplyModalItems?.collection?.ownerCount}
+                    {supplyModalItems?.collection?.ownerCount
+                      ? supplyModalItems?.collection?.ownerCount
+                      : "-"}
                   </Text>
                 </Row>
               </Flex>
@@ -959,9 +974,11 @@ const Portfolio = (props) => {
                 <Text className="text-color-two font-small ">Created At</Text>
                 <Row justify={"center"}>
                   <Text className="text-color-one font-small font-weight-600">
-                    {new Date(
-                      supplyModalItems?.collection?.createdAt
-                    ).toUTCString()}
+                    {supplyModalItems?.collection?.createdAt
+                      ? new Date(
+                          supplyModalItems?.collection?.createdAt
+                        ).toUTCString()
+                      : "-"}
                   </Text>
                 </Row>
               </Flex>
@@ -969,7 +986,9 @@ const Portfolio = (props) => {
                 <Text className="text-color-two font-small">Supply</Text>
                 <Row justify={"center"}>
                   <Text className="text-color-one font-small font-weight-600">
-                    {supplyModalItems?.collection?.supply}
+                    {supplyModalItems?.collection?.supply
+                      ? supplyModalItems?.collection?.supply
+                      : "-"}
                   </Text>
                 </Row>
               </Flex>
@@ -1061,7 +1080,6 @@ const Portfolio = (props) => {
         <Row>
           <span className="text-color-two mt-15 pointer" id="agree">
             <Checkbox
-              for="agree"
               checked={agreeCheckbox}
               onChange={(e) => setAgreeCheckbox(e.target.checked)}
             />{" "}

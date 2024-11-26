@@ -3,10 +3,12 @@ import {
   ConfigProvider,
   Divider,
   Drawer,
+  Dropdown,
   Flex,
   Grid,
   Menu,
   Modal,
+  Radio,
   Row,
   Tabs,
   Tooltip,
@@ -21,7 +23,9 @@ import { PiCopyBold } from "react-icons/pi";
 import { RiWallet3Fill } from "react-icons/ri";
 import { RxHamburgerMenu } from "react-icons/rx";
 import Web3 from "web3";
+import Polygon from "../../assets/coin_logo/Polygon_Icon.webp";
 import logo from "../../assets/coin_logo/edu_coin.png";
+import Ethereum from "../../assets/coin_logo/eth_coin.png";
 import myordinalslogo from "../../assets/logo/ordinalslogo.png";
 import CustomButton from "../../component/Button";
 import CardDisplay from "../../component/card";
@@ -33,8 +37,15 @@ import {
   setLoading,
   setUserCollateral,
 } from "../../redux/slice/constant";
-import { clearWalletState, setMetaCredentials } from "../../redux/slice/wallet";
 import {
+  clearWalletState,
+  setChain,
+  setMetaCredentials,
+} from "../../redux/slice/wallet";
+import {
+  Capitalaize,
+  CHAIN_ETHEREUM,
+  CHAIN_POLYGON,
   chainId,
   META_WALLET_KEY,
   openCampusNetworkMainnetParams,
@@ -42,6 +53,7 @@ import {
   sliceAddress,
 } from "../../utils/common";
 import { propsContainer } from "../props-container";
+import { FaAngleDown } from "react-icons/fa";
 
 const Nav = (props) => {
   const { Text } = Typography;
@@ -53,9 +65,11 @@ const Nav = (props) => {
 
   const walletState = reduxState.wallet;
   const activeWallet = reduxState.wallet.active;
+  const chain = reduxState.wallet.chain;
   const metaAddress = walletState.meta.address;
 
   const [isConnectModal, setConnectModal] = useState(false);
+  const [chainConnect, setChainConnect] = useState("");
   const [tabKey, setTabKey] = useState("1");
   const [open, setOpen] = useState(false);
   const [screenDimensions, setScreenDimensions] = React.useState({
@@ -185,66 +199,68 @@ const Nav = (props) => {
   };
 
   const connectWallet = async () => {
-    // Meta wallet
-    if (window.ethereum) {
-      const web3 = new Web3(window.ethereum);
-      try {
-        let isSwitched = false;
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const accounts = await web3.eth.getAccounts();
-        const networkId = await web3.eth.net.getId();
+    if (chainConnect) {
+      // Meta wallet
+      const web3 = new Web3(window.ethereum || window.web3.currentProvider);
+      if (web3) {
+        try {
+          let isSwitched = false;
+          await window.ethereum.request({ method: "eth_requestAccounts" });
+          const accounts = await web3.eth.getAccounts();
+          const networkId = await web3.eth.net.getId();
 
-        if (Number(networkId) !== chainId) {
-          Notify("info", "Switching to the EDU open campus network!");
-          try {
-            await window.ethereum.request({
-              method: "wallet_switchEthereumChain",
-              params: [{ chainId: openCampusNetworkMainnetParams.chainId }],
-            });
-            isSwitched = true;
-          } catch (switchError) {
-            if (switchError.code === 4902) {
-              // This error code indicates that the chain has not been added to MetaMask.
-              try {
-                await window.ethereum.request({
-                  method: "wallet_addEthereumChain",
-                  params: [openCampusNetworkMainnetParams],
-                });
-                isSwitched = true;
-              } catch (addError) {
-                console.error("Failed to add the network:", addError);
+          if (Number(networkId) !== chainId) {
+            Notify("info", "Switching to the EDU open campus network!");
+            try {
+              await window.ethereum.request({
+                method: "wallet_switchEthereumChain",
+                params: [{ chainId: openCampusNetworkMainnetParams.chainId }],
+              });
+              isSwitched = true;
+            } catch (switchError) {
+              if (switchError.code === 4902) {
+                // This error code indicates that the chain has not been added to MetaMask.
+                try {
+                  await window.ethereum.request({
+                    method: "wallet_addEthereumChain",
+                    params: [openCampusNetworkMainnetParams],
+                  });
+                  isSwitched = true;
+                } catch (addError) {
+                  console.error("Failed to add the network:", addError);
+                }
+              } else {
+                console.error("Failed to switch the network:", switchError);
               }
-            } else {
-              console.error("Failed to switch the network:", switchError);
             }
+          } else {
+            isSwitched = true;
           }
-        } else {
-          isSwitched = true;
+          if (isSwitched) {
+            dispatch(
+              setMetaCredentials({
+                address: accounts[0],
+                publicKey: null,
+              })
+            );
+            Notify("success", "Wallet connection success!");
+            dispatch(setChain(chainConnect));
+            collapseConnectedModal();
+          } else {
+            Notify("error", "Wallet switching failed!");
+          }
+          dispatch(setLoading(false));
+        } catch (error) {
+          console.error("User denied account access", error);
         }
-        if (isSwitched) {
-          dispatch(
-            setMetaCredentials({
-              address: accounts[0],
-              publicKey: null,
-            })
-          );
-          Notify("success", "Wallet connection success!");
-          collapseConnectedModal();
-        } else {
-          Notify("error", "Wallet switching failed!");
-        }
-        dispatch(setLoading(false));
-      } catch (error) {
-        console.error("User denied account access", error);
+      } else {
+        Notify(
+          "warning",
+          "Non-Ethereum browser detected. You should consider trying MetaMask!"
+        );
       }
-    } else if (window.web3) {
-      // Legacy dapp browsers...
-      // const web3 = new Web3(window.web3.currentProvider);
     } else {
-      Notify(
-        "warning",
-        "Non-Ethereum browser detected. You should consider trying MetaMask!"
-      );
+      Notify("warning", "Choose the network!");
     }
   };
 
@@ -538,6 +554,74 @@ const Nav = (props) => {
 
         <Col>
           <Flex gap={10} justify="end" align={"center"} ref={ref4}>
+            <Dropdown
+              className="pointer"
+              menu={{
+                items: [
+                  {
+                    label: (
+                      <Text
+                        className={`${
+                          breakPoint.xs ? "font-xsmall" : "font-small"
+                        } text-color-one biticon`}
+                      >
+                        {Capitalaize(
+                          chain === CHAIN_POLYGON
+                            ? CHAIN_ETHEREUM
+                            : CHAIN_POLYGON
+                        )}
+                      </Text>
+                    ),
+                    key: "0",
+                    onClick: () => {
+                      dispatch(
+                        setChain(
+                          chain === CHAIN_POLYGON
+                            ? CHAIN_ETHEREUM
+                            : CHAIN_POLYGON
+                        )
+                      );
+                      onClose();
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 1500);
+                    },
+                    icon: (
+                      <img
+                        src={chain === CHAIN_POLYGON ? Ethereum : Polygon}
+                        alt="noimage"
+                        style={{
+                          justifyContent: "center",
+                          marginRight: "17px",
+                        }}
+                        width={"25px"}
+                      />
+                    ),
+                  },
+                ],
+              }}
+              trigger={["click"]}
+            >
+              <Text
+                className={`${
+                  breakPoint.xs ? "font-medium" : "font-large"
+                } gradient-text-one biticon heading-one`}
+              >
+                {/* {chain.toUpperCase()} */}
+                <img
+                  src={chain === CHAIN_POLYGON ? Polygon : Ethereum}
+                  alt="noimage"
+                  style={{ justifyContent: "center" }}
+                  width={"35px"}
+                />
+                <FaAngleDown color="white" />
+              </Text>
+            </Dropdown>
+          </Flex>
+        </Col>
+
+        <Col>
+          <Flex gap={10} justify="end" align={"center"} ref={ref4}>
             {activeWallet.length ? (
               <Col>
                 <Flex
@@ -628,6 +712,7 @@ const Nav = (props) => {
         footer={""}
         onCancel={() => {
           collapseConnectedModal();
+          setChainConnect("");
         }}
         width={breakPoint.xs ? "100%" : "30%"}
       >
@@ -658,10 +743,40 @@ const Nav = (props) => {
 
         <Row>
           <Col xs={24}>
+            <Row>
+              <Text className="font-weight-600 letter-spacing-small text-color-primary font-small">
+                {" "}
+                Select Chain
+              </Text>
+            </Row>
+            <Row className="mt-15" align={"middle"}>
+              <Radio.Group
+                className="radio-css"
+                size="large"
+                buttonStyle="solid"
+                optionType="button"
+                value={chainConnect}
+                onChange={({ target: { value } }) => {
+                  setChainConnect(value);
+                }}
+                options={[
+                  {
+                    label: "Polygon",
+                    value: CHAIN_POLYGON,
+                  },
+                  {
+                    label: "Ethereum",
+                    value: CHAIN_ETHEREUM,
+                  },
+                ]}
+              />
+            </Row>
+
             <Tabs
               activeKey={tabKey}
+              className="mt-15"
               onChange={(e) => {
-                e !== "3" && setTabKey(e);
+                setTabKey(e);
               }}
               items={[
                 {
@@ -682,13 +797,15 @@ const Nav = (props) => {
                   ),
                   children: (
                     <>
-                      {paymentWallets.map((wallet, index) => {
-                        return (
-                          <Row key={`index-${wallet.key}`}>
-                            {walletCards(wallet, index)}
-                          </Row>
-                        );
-                      })}
+                      <Row>
+                        {paymentWallets.map((wallet, index) => {
+                          return (
+                            <Row key={`index-${wallet.key}`}>
+                              {walletCards(wallet, index)}
+                            </Row>
+                          );
+                        })}
+                      </Row>
                     </>
                   ),
                 },
@@ -701,7 +818,7 @@ const Nav = (props) => {
       <Drawer
         closeIcon
         width={screenDimensions.width > 425 ? "320px" : "280px"}
-        style={{ height: screenDimensions.width > 1199 ? "43%" : "100%" }}
+        style={{ height: screenDimensions.width > 1199 ? "45%" : "100%" }}
         title={
           <>
             <Row justify={"space-evenly"} align={"middle"}>
@@ -776,6 +893,28 @@ const Nav = (props) => {
                     ) : (
                       "---"
                     )}
+                  </Text>
+                </Flex>
+              </Flex>
+            </Col>
+
+            <Col className="mt-15">
+              <Flex gap={10} justify="end" align={"center"} ref={ref4}>
+                <img
+                  src={chain === CHAIN_POLYGON ? Polygon : Ethereum}
+                  alt="noimage"
+                  style={{ justifyContent: "center", marginRight: "17px" }}
+                  width={"25px"}
+                />
+
+                <Flex vertical>
+                  <Text className="text-color-two font-medium">Chain</Text>
+                  <Text
+                    className={`${
+                      breakPoint.xs ? "font-medium" : "font-large"
+                    } gradient-text-one biticon heading-one`}
+                  >
+                    {Capitalaize(chain)}
                   </Text>
                 </Flex>
               </Flex>

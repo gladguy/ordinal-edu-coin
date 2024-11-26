@@ -20,6 +20,7 @@ import borrowJson from "../../utils/borrow_abi.json";
 import {
   API_METHODS,
   BorrowContractAddress,
+  CHAIN_POLYGON,
   TokenContractAddress,
   apiUrl,
   calculateAPY,
@@ -36,6 +37,7 @@ export const propsContainer = (Component) => {
     const navigate = useNavigate();
     const location = useLocation();
     const reduxState = useSelector((state) => state);
+    const chain = reduxState.wallet.chain;
     const activeWallet = reduxState.wallet.active;
     const metaAddress = reduxState.wallet.meta.address;
     const api_agent = reduxState.constant.agent;
@@ -65,21 +67,24 @@ export const propsContainer = (Component) => {
     }, [activeWallet.length]);
 
     const chainPrice = async () => {
-      const chainData = await API_METHODS.get(
-        `${apiUrl.Asset_server_base_url}/api/v1/fetch/Polygon`
-      );
+      let url;
+      if (chain === CHAIN_POLYGON) {
+        url = `https://api.coingecko.com/api/v3/simple/price?ids=matic-network&vs_currencies=usd`;
+      } else {
+        url = `https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd`;
+      }
+      const chainData = await API_METHODS.get(url);
       return chainData;
     };
 
     const fetchChainLiveValue = async () => {
       try {
         const chainData = await chainPrice();
-        if (chainData.data.data["matic-network"]) {
-          const ChainValue = chainData.data.data["matic-network"].usd;
+        if (chainData.data["matic-network"]) {
+          const ChainValue = chainData.data["matic-network"].usd;
           dispatch(setChainValue(ChainValue));
         } else {
-          // fetchChainLiveValue();
-          // dispatch(setChainValue(0.45));
+          // chainPrice();
         }
       } catch (error) {
         // Notify("error", "Failed to fetch ckBtc");
@@ -121,8 +126,25 @@ export const propsContainer = (Component) => {
     useEffect(() => {
       (async () => {
         if (api_agent) {
-          const approvedCollections = await api_agent.getApproved_Collections();
-
+          const approvedCollections =
+            await api_agent.getApprovedCollectionsByChain(chain);
+          // approvedCollections = [
+          //   "fewoworld-flowers",
+          //   "discord-utility-scam-ep-2",
+          //   "snow-bears",
+          //   "web3-identity-crisis",
+          //   "checkpunks",
+          //   "goblintownhelix",
+          //   "oreraid",
+          //   "everybodys",
+          //   "moongirls-emanuele-ferrari",
+          //   // "wonderful-composition-with-grids",
+          //   // "etherpolice-origin",
+          //   // "akutar-accessories",
+          //   // "end-of-sartoshi",
+          //   // "egglins-xyz",
+          //   // "thebunnyisland"
+          // ];
           if (approvedCollections.length) {
             const collectionPromise = approvedCollections.map(
               async (collection) => {
@@ -130,7 +152,7 @@ export const propsContainer = (Component) => {
                 return new Promise(async (resolve) => {
                   const options = {
                     method: "GET",
-                    url: `${apiUrl.Asset_server_base_url}/api/v1/get/collection/${col.collectionName}?chain=polygon`,
+                    url: `${apiUrl.Asset_server_base_url}/api/v1/get/collection/${col.collectionName}?chain=${chain}`,
                   };
                   axios
                     .request(options)
@@ -174,7 +196,7 @@ export const propsContainer = (Component) => {
       try {
         const options = {
           method: "GET",
-          url: `${apiUrl.Asset_server_base_url}/api/v1/token/activity/${custodyAddress}?chain=polygon`,
+          url: `${apiUrl.Asset_server_base_url}/api/v1/token/activity/${custodyAddress}?chain=${chain}`,
         };
 
         const result = await axios.request(options);
@@ -328,10 +350,10 @@ export const propsContainer = (Component) => {
     const fetchCoinPrice = async () => {
       try {
         const coinData = await API_METHODS.get(
-          `${apiUrl.Asset_server_base_url}/api/v1/fetch/EduPrice`
+          `https://api.coingecko.com/api/v3/simple/price?ids=edu-coin&vs_currencies=usd`
         );
-        if (coinData.data.data["edu-coin"]) {
-          const coinValue = coinData.data.data["edu-coin"].usd;
+        if (coinData.data["edu-coin"]) {
+          const coinValue = coinData.data["edu-coin"].usd;
           dispatch(setCoinValue(coinValue));
         } else {
           // fetchCoinPrice();
@@ -347,7 +369,7 @@ export const propsContainer = (Component) => {
         method: "GET",
         url: `${apiUrl.Asset_server_base_url}/api/v1/user/tokens/${
           address ? address : metaAddress
-        }?chain=polygon`,
+        }?chain=${chain}`,
       };
 
       try {
@@ -394,7 +416,7 @@ export const propsContainer = (Component) => {
     }, [api_agent, dispatch]);
 
     useEffect(() => {
-      if (activeWallet.length && !userAssets) {
+      if (activeWallet.length && !userAssets && chain) {
         fetchUserAssets();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -405,12 +427,13 @@ export const propsContainer = (Component) => {
         activeWallet.length &&
         approvedCollections[0] &&
         !borrowCollateral.length &&
-        userAssets
+        userAssets &&
+        chain
       ) {
         getCollaterals();
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeWallet, approvedCollections, userAssets]);
+    }, [activeWallet, approvedCollections, userAssets, chain]);
 
     useEffect(() => {
       if (activeWallet.length) {

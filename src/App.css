@@ -273,6 +273,10 @@ body {
   padding: 20px !important;
 }
 
+.text-color-primary {
+  color: var(--main-light-blue);
+}
+
 .text-color-one {
   color: #e1e1e1;
 }

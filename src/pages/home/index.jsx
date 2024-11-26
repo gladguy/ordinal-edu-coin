@@ -6,12 +6,14 @@ import { SpinningCircles } from "react-loading-icons";
 import bitcoin from "../../assets/coin_logo/edu_coin.png";
 import CardDisplay from "../../component/card";
 import { propsContainer } from "../../container/props-container";
+import { Capitalaize } from "../../utils/common";
 
 const Home = (props) => {
   const { reduxState } = props.redux;
   const collections = reduxState.constant.approvedCollections;
   const coinValue = reduxState.constant.coinValue;
   const chainvalue = reduxState.constant.chainvalue;
+  const chain = reduxState.wallet.chain;
 
   const { Text } = Typography;
   const { useBreakpoint } = Grid;
@@ -72,7 +74,7 @@ const Home = (props) => {
       <Row>
         <Col>
           <h1 className="text-color-four letter-spacing-small">
-            Polygon NFT Collections
+            {Capitalaize(chain)} NFT Collections
           </h1>
         </Col>
       </Row>

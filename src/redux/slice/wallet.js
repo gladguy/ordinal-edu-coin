@@ -7,6 +7,7 @@ const state = {
     publicKey: null
   },
   active: [],
+  chain: ""
 };
 
 const walletSlice = createSlice({
@@ -19,18 +20,24 @@ const walletSlice = createSlice({
       state.active.push(META_WALLET_KEY);
     },
 
+    setChain: (state, action) => {
+      state.chain = action.payload;
+    },
+
     clearWalletState: (state) => {
       state.meta = {
         address: null,
         publicKey: null
       }
       state.active = []
+      state.chain = ""
     }
   }
 });
 
 export const {
-  setMetaCredentials,
+  setChain,
   clearWalletState,
+  setMetaCredentials,
 } = walletSlice.actions;
 export default walletSlice.reducer;

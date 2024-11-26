@@ -18,6 +18,8 @@ export const apiUrl = {
 };
 
 export const META_WALLET_KEY = "meta";
+export const CHAIN_ETHEREUM = "ethereum";
+export const CHAIN_POLYGON = "polygon";
 export const chainId = 41923; // OpenCampus Mainnet Chain ID
 export const IS_USER = true;
 export const IS_DEV = false;

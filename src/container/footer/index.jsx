@@ -3,10 +3,12 @@ import gsap from "gsap";
 import React from "react";
 import TailSpin from "react-loading-icons/dist/esm/components/tail-spin";
 import Polygon from "../../assets/coin_logo/Polygon_Icon.webp";
+import Ethereum from "../../assets/coin_logo/eth_coin.png";
 import Loading from "../../component/loading-wrapper/secondary-loader";
 import logo from "../../assets/coin_logo/edu_coin.png";
 
 import { propsContainer } from "../props-container";
+import { CHAIN_POLYGON } from "../../utils/common";
 
 const Footer = (props) => {
   const { Text } = Typography;
@@ -14,6 +16,7 @@ const Footer = (props) => {
   const breakpoints = useBreakpoint();
   const { reduxState } = props.redux;
   const constantState = reduxState.constant;
+  const chain = reduxState.wallet.chain;
 
   let USDollar = new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -42,7 +45,7 @@ const Footer = (props) => {
               <Flex gap={5} align="center">
                 <img
                   className="round"
-                  src={Polygon}
+                  src={chain === CHAIN_POLYGON ? Polygon : Ethereum}
                   alt="noimage"
                   style={{ justifyContent: "center" }}
                   width={"25px"}
