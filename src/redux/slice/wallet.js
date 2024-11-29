@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { META_WALLET_KEY } from "../../utils/common";
+import { CHAIN_ETHEREUM, META_WALLET_KEY } from "../../utils/common";
 
 const state = {
   meta: {
@@ -7,7 +7,7 @@ const state = {
     publicKey: null
   },
   active: [],
-  chain: ""
+  chain: CHAIN_ETHEREUM
 };
 
 const walletSlice = createSlice({

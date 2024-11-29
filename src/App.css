@@ -1046,15 +1046,28 @@ input::placeholder {
   font-size: 22px;
 } */
 
-.ant-input-affix-wrapper {
+.input-collection {
+  color: white;
+}
+
+.ant-input-affix-wrapper,
+.input-collection {
   background-color: transparent;
   border-color: var(--main-light-blue);
 }
 
-input::-webkit-input-placeholder {
+input::-webkit-input-placeholder,
+.input-collection {
   font-size: 17px;
   font-family: soul_font;
   letter-spacing: 0.5px;
+}
+
+.input-collection:hover,
+.input-collection:focus,
+.input-collection:focus-within {
+  background-color: var(--primary-grey) !important;
+  border-color: var(--main-light-blue);
 }
 
 .ant-input {

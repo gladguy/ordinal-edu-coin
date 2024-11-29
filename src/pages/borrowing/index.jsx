@@ -18,7 +18,7 @@ import { IoInformationCircleSharp } from "react-icons/io5";
 import { PiPlusSquareThin } from "react-icons/pi";
 import { TbInfoSquareRounded } from "react-icons/tb";
 import { Bars } from "react-loading-icons";
-import Bitcoin from "../../assets/coin_logo/edu_coin.png";
+import EduCoin from "../../assets/coin_logo/edu_coin.png";
 import CustomButton from "../../component/Button";
 import CardDisplay from "../../component/card";
 import LendModal from "../../component/lend-modal";
@@ -220,7 +220,7 @@ const Borrowing = (props) => {
           <Flex align="center" vertical gap={5}>
             <Flex align="center" vertical gap={5} className={"text-color-one"}>
               <Flex align="center" gap={3}>
-                <img src={Bitcoin} alt="noimage" width={20} />{" "}
+                <img src={EduCoin} alt="noimage" width={20} />{" "}
                 {data.ordinalIncrypto}
               </Flex>
               ${data.ordinalInUSD}
@@ -304,9 +304,6 @@ const Borrowing = (props) => {
       },
     },
   ];
-  // console.log("collateralData", collateralData);
-  // console.log("borrowModalData", borrowModalData);
-  // console.log("approvedCollections", approvedCollections);
 
   const toggleBorrowModal = () => {
     setIsBorrowModal(!isBorrowModal);
@@ -630,7 +627,7 @@ const Borrowing = (props) => {
                 className={`font-size-16 iconalignment text-color-two letter-spacing-small`}
               >
                 <img
-                  src={Bitcoin}
+                  src={EduCoin}
                   alt="noimage"
                   style={{ justifyContent: "center" }}
                   width={20}
@@ -774,7 +771,7 @@ const Borrowing = (props) => {
                 ref={amountRef}
                 prefix={
                   <img
-                    src={Bitcoin}
+                    src={EduCoin}
                     alt="noimage"
                     style={{ justifyContent: "center" }}
                     width={20}
@@ -804,7 +801,7 @@ const Borrowing = (props) => {
                 readOnly
                 prefix={
                   <img
-                    src={Bitcoin}
+                    src={EduCoin}
                     alt="noimage"
                     style={{ justifyContent: "center" }}
                     width={20}
@@ -1055,7 +1052,7 @@ const Borrowing = (props) => {
                             </Text>
                             <img
                               className="round"
-                              src={Bitcoin}
+                              src={EduCoin}
                               alt="noimage"
                               style={{ justifyContent: "center" }}
                               width={20}
@@ -1090,7 +1087,7 @@ const Borrowing = (props) => {
                             </Text>
                             <img
                               className="round"
-                              src={Bitcoin}
+                              src={EduCoin}
                               alt="noimage"
                               style={{ justifyContent: "center" }}
                               width={20}
@@ -1125,7 +1122,7 @@ const Borrowing = (props) => {
                             </Text>
                             <img
                               className="round"
-                              src={Bitcoin}
+                              src={EduCoin}
                               alt="noimage"
                               style={{ justifyContent: "center" }}
                               width={20}

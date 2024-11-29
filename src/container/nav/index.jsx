@@ -19,6 +19,7 @@ import { motion } from "framer-motion";
 import gsap from "gsap";
 import React, { useEffect, useRef, useState } from "react";
 import { AiOutlineDisconnect } from "react-icons/ai";
+import { FaAngleDown } from "react-icons/fa";
 import { PiCopyBold } from "react-icons/pi";
 import { RiWallet3Fill } from "react-icons/ri";
 import { RxHamburgerMenu } from "react-icons/rx";
@@ -53,7 +54,6 @@ import {
   sliceAddress,
 } from "../../utils/common";
 import { propsContainer } from "../props-container";
-import { FaAngleDown } from "react-icons/fa";
 
 const Nav = (props) => {
   const { Text } = Typography;
@@ -245,6 +245,11 @@ const Nav = (props) => {
             );
             Notify("success", "Wallet connection success!");
             dispatch(setChain(chainConnect));
+            if (chainConnect !== chain) {
+              setTimeout(() => {
+                window.location.reload();
+              }, 1500);
+            }
             collapseConnectedModal();
           } else {
             Notify("error", "Wallet switching failed!");
@@ -607,7 +612,6 @@ const Nav = (props) => {
                   breakPoint.xs ? "font-medium" : "font-large"
                 } gradient-text-one biticon heading-one`}
               >
-                {/* {chain.toUpperCase()} */}
                 <img
                   src={chain === CHAIN_POLYGON ? Polygon : Ethereum}
                   alt="noimage"
