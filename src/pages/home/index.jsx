@@ -3,10 +3,15 @@ import { motion } from "framer-motion";
 import gsap from "gsap";
 import React, { useEffect, useState } from "react";
 import { SpinningCircles } from "react-loading-icons";
-import bitcoin from "../../assets/coin_logo/edu_coin.png";
+import logo from "../../assets/coin_logo/edu_coin.png";
 import CardDisplay from "../../component/card";
 import { propsContainer } from "../../container/props-container";
-import { Capitalaize } from "../../utils/common";
+import {
+  calculateOrdinalInCrypto,
+  Capitalaize,
+  CHAIN_ETHEREUM,
+  formatNumber,
+} from "../../utils/common";
 
 const Home = (props) => {
   const { reduxState } = props.redux;
@@ -74,7 +79,7 @@ const Home = (props) => {
       <Row>
         <Col>
           <h1 className="text-color-four letter-spacing-small">
-            {Capitalaize(chain)} NFT Collections
+            {Capitalaize(chain || CHAIN_ETHEREUM)} NFT Collections
           </h1>
         </Col>
       </Row>
@@ -96,11 +101,18 @@ const Home = (props) => {
               }
             });
             const floor = collection?.floorAsk?.price?.amount?.decimal
-              ? collection?.floorAsk?.price?.amount?.decimal
-              : 0.0035;
+              ? calculateOrdinalInCrypto(
+                  collection?.floorAsk?.price?.amount?.decimal,
+                  chainvalue,
+                  coinValue
+                )
+              : 0;
+
             const volume = collection?.volume?.allTime
-              ? collection?.volume?.allTime
-              : 30000;
+              ? (collection?.volume?.allTime * chainvalue) / coinValue
+              : 0;
+
+            const formatedVolume = formatNumber(volume);
 
             return (
               <Col
@@ -182,8 +194,8 @@ const Home = (props) => {
                               align="center"
                               className="font-medium text-color-two"
                             >
-                              <img src={bitcoin} alt="noimage" width={20} />
-                              {floor}
+                              <img src={logo} alt="noimage" width={20} />
+                              {floor ? floor.ordinalIncrypto : "-"}
                             </Flex>
                           </div>
 
@@ -196,15 +208,16 @@ const Home = (props) => {
                           <div>
                             <Flex
                               gap={3}
+                              align="center"
                               className="font-medium text-color-two"
                             >
                               <img
-                                src={bitcoin}
+                                src={logo}
                                 alt="noimage"
                                 width={20}
-                                height={22}
+                                height={20}
                               />
-                              {Math.round((volume * chainvalue) / coinValue)}
+                              {formatedVolume}
                             </Flex>
                           </div>
                         </div>

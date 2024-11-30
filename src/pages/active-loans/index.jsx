@@ -67,7 +67,7 @@ const ActiveLoans = (props) => {
     } catch (error) {
       console.log("Collateral fetching error", error);
       if (error.message.includes("No NFT found")) {
-        setContractTokens({});
+        setContractTokens([]);
       }
     }
   };
@@ -176,7 +176,7 @@ const ActiveLoans = (props) => {
             <ThreeDots stroke="#6a85f1" alignmentBaseline="central" />
           ) : (
             <>
-              {Object?.keys(custodyTokens)?.length ? (
+              {custodyTokens?.length ? (
                 <>
                   {custodyTokens.map((token, index) => {
                     const image =

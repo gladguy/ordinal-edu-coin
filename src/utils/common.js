@@ -104,12 +104,27 @@ export const calculateOrdinalInCrypto = (ordinalFloor, BTCPriceInUSD, CryptoPric
   const ordinalInUSD = ordinalFloor * BTCPriceInUSD;
 
   // Calculate ordinal price in BNB
-  const ordinalIncrypto = fractionToFixed(ordinalInUSD, CryptoPriceInUSD);
+  const ordinalIncrypto = fractionToFixed(ordinalInUSD, CryptoPriceInUSD, 6);
 
   return {
-    ordinalInUSD: ordinalInUSD.toFixed(2),
+    ordinalInUSD: ordinalInUSD.toFixed(6),
     ordinalIncrypto: ordinalIncrypto
   };
+}
+
+export function formatNumber(num) {
+  if (num >= 10000000) {
+    // 1 crore or more
+    return (num / 10000000).toFixed(2) + "L"; // Lakh
+  } else if (num >= 100000) {
+    // 1 lakh or more
+    return (num / 100000).toFixed(2) + "L"; // Lakh
+  } else if (num >= 1000) {
+    // 1 thousand or more
+    return (num / 1000).toFixed(2) + "K"; // Thousand
+  } else {
+    return num.toString(); // Less than 1 thousand
+  }
 }
 
 export const IndexContractAddress = process.env.REACT_APP_REGISTRATION;
@@ -310,6 +325,46 @@ export async function switchToPolygonNetwork() {
       }
     } else {
       console.error("Failed to switch to Polygon network:", error);
+    }
+  }
+}
+
+export async function switchToEthereumMainnet() {
+  const ethereumParams = {
+    chainId: "0x1", // Hexadecimal value of 1 (Ethereum Mainnet chain ID)
+    chainName: "Ethereum Mainnet",
+    nativeCurrency: {
+      name: "Ether",
+      symbol: "ETH",
+      decimals: 18,
+    },
+    rpcUrls: ["https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"], // Recommended Ethereum RPC URL (replace with your Infura project ID)
+    blockExplorerUrls: ["https://etherscan.io"],
+  };
+
+  try {
+    if (window.ethereum) {
+      // Request MetaMask to switch to Ethereum Mainnet
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: ethereumParams.chainId }],
+      });
+    } else {
+      Notify("error", "MetaMask is not installed!");
+    }
+  } catch (error) {
+    if (error.code === 4902) {
+      // If the network is not added, request to add it
+      try {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [ethereumParams],
+        });
+      } catch (addError) {
+        console.error("Failed to add Ethereum Mainnet:", addError);
+      }
+    } else {
+      console.error("Failed to switch to Ethereum Mainnet:", error);
     }
   }
 }

@@ -33,10 +33,13 @@ import { setLoading } from "../../redux/slice/constant";
 import borrowJson from "../../utils/borrow_abi.json";
 import {
   BorrowContractAddress,
+  calculateOrdinalInCrypto,
   Capitalaize,
+  CHAIN_POLYGON,
   custodyAddress,
   DateTimeConverter,
   sliceAddress,
+  switchToEthereumMainnet,
   switchToOpenCampusNetwork,
   switchToPolygonNetwork,
 } from "../../utils/common";
@@ -54,6 +57,7 @@ const Portfolio = (props) => {
   const chainvalue = reduxState.constant.chainvalue;
   const coinValue = reduxState.constant.coinValue;
   const metaAddress = walletState.meta.address;
+  const chain = reduxState.wallet.chain;
 
   const ETH_ZERO = process.env.REACT_APP_ETH_ZERO;
 
@@ -201,7 +205,11 @@ const Portfolio = (props) => {
       dataIndex: "value",
       render: (_, obj) => {
         const floor = Number(obj?.collection?.floorAskPrice?.amount?.decimal)
-          ? Number(obj?.collection?.floorAskPrice?.amount?.decimal)
+          ? calculateOrdinalInCrypto(
+              Number(obj?.collection?.floorAskPrice?.amount?.decimal),
+              chainvalue,
+              coinValue
+            )
           : 0;
         return (
           <>
@@ -213,10 +221,10 @@ const Portfolio = (props) => {
                   className="text-color-one font-xsmall letter-spacing-small"
                 >
                   <img src={Bitcoin} alt="noimage" width={20} />
-                  {((floor * chainvalue) / coinValue).toFixed(2)}{" "}
+                  {floor.ordinalIncrypto}{" "}
                 </Flex>
                 <span className="text-color-two font-xsmall letter-spacing-small">
-                  $ {(floor * chainvalue).toFixed(2)}
+                  $ {floor.ordinalInUSD}
                 </span>
               </Flex>
             ) : (
@@ -268,6 +276,11 @@ const Portfolio = (props) => {
               onClick={async () => {
                 setHandleSupplyModal(true);
                 setSupplyModalItems(objs);
+                if (chain === CHAIN_POLYGON) {
+                  await switchToPolygonNetwork();
+                } else {
+                  await switchToEthereumMainnet();
+                }
                 await switchToPolygonNetwork();
                 await getNetwork();
               }}

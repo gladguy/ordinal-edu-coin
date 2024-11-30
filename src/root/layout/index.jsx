@@ -1,14 +1,36 @@
-import { Col, Flex, Layout, Row } from "antd";
-import { Content, Header } from "antd/es/layout/layout";
+import {
+  Col,
+  Divider,
+  Flex,
+  Grid,
+  Layout,
+  Row,
+  Tooltip,
+  Typography,
+} from "antd";
+import { Content, Footer, Header } from "antd/es/layout/layout";
 import gsap from "gsap";
 import React, { Suspense } from "react";
-import { Route, Routes, useLocation } from "react-router-dom";
+import {
+  Link,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import LoadingWrapper from "../../component/loading-wrapper";
 import Mainheader from "../../container/footer";
+import logo from "../../assets/logo/ordinalslogo.png";
 import Nav from "../../container/nav";
 import { publicRoutes } from "../../routes";
+import { FaXTwitter } from "react-icons/fa6";
+import { IoIosMail } from "react-icons/io";
 
 const MainLayout = () => {
+  const { Text } = Typography;
+  const { useBreakpoint } = Grid;
+  const screens = useBreakpoint();
+  const navigate = useNavigate();
   const location = useLocation();
 
   gsap.to(".round", {
@@ -67,67 +89,9 @@ const MainLayout = () => {
           </Content>
 
           <Flex vertical>
-            {/* {location.pathname === "/" ? (
+            {location.pathname === "/" ? (
               <>
-                <Footer className="bg-black mt-20" style={{ padding: "20px" }}>
-                  <Row justify={"center"} className="mt-30">
-                    <Col xs={24} md={22}>
-                      <Row justify={"space-between"} gutter={20}>
-                        <Col md={7}>
-                          <Flex vertical gap={10} wrap="wrap">
-                            <Text
-                              className={`gradient-text-one font-large font-weight-600 letter-spacing-small ${
-                                screens.xs ? "text-decor-line" : ""
-                              }`}
-                            >
-                              Lightning Payment
-                            </Text>
-                            <Text className="text-color-two font-small letter-spacing-small">
-                              Ordinals payment are powered by Chain-key Bitcoin
-                              (ckBTC) is an ICRC-2-compliant token that is
-                              backed 1:1 by bitcoins held 100% on the IC
-                              mainnet.
-                            </Text>
-                          </Flex>
-                        </Col>
-
-                        <Col md={7}>
-                          <Flex vertical gap={10} wrap="wrap">
-                            <Text
-                              className={`gradient-text-one font-large font-weight-600 letter-spacing-small ${
-                                screens.xs ? "mt text-decor-line" : ""
-                              }`}
-                            >
-                              PSBTs and DLCs
-                            </Text>
-                            <Text className="text-color-two font-small letter-spacing-small">
-                              Partially Signed Bitcoin Transactions (PSBTs) &
-                              Discreet Log Contract (DLC) are used to facilitate
-                              the transactions and securely escrow the Ordinal.
-                            </Text>
-                          </Flex>
-                        </Col>
-
-                        <Col md={7}>
-                          <Flex vertical gap={10} wrap="wrap">
-                            <Text
-                              className={`gradient-text-one font-large font-weight-600 letter-spacing-small ${
-                                screens.xs ? "mt text-decor-line" : ""
-                              }`}
-                            >
-                              No Wrapping
-                            </Text>
-                            <Text className="text-color-two font-small letter-spacing-small">
-                              You don't need to wrap your Ordinals or use
-                              intermediaries because everything occurs on
-                              Layer-1 Bitcoin.
-                            </Text>
-                          </Flex>
-                        </Col>
-                      </Row>
-                    </Col>
-                  </Row>
-
+                <Footer className="bg-black" style={{ padding: "20px" }}>
                   <Row
                     justify={"center"}
                     className={screens.md ? "mt-50" : "mt-15"}
@@ -169,14 +133,14 @@ const MainLayout = () => {
                                 screens.xs ? "font-xssmall" : "font-medium"
                               } font-family-one letter-spacing-small`}
                             >
-                              My Ordinals.Loan 
+                              OpenCampus
                             </Text>
                             <Text
                               className={`gradient-text-one ${
                                 screens.xs ? "font-xssmall" : "font-small"
                               } font-family-one letter-spacing-small`}
                             >
-                              {footerText}
+                              {`All rights reserved Copyright - ${new Date().getFullYear()}`}
                             </Text>
                           </Flex>
                         </Col>
@@ -222,7 +186,7 @@ const MainLayout = () => {
                                       }}
                                       className="text-color-two headertitle title pointer font-small letter-spacing-small"
                                     >
-                                      Bridge Ordinals
+                                      DBridge
                                     </Text>
                                   </Flex>
                                 </Flex>
@@ -249,7 +213,8 @@ const MainLayout = () => {
                             )}
 
                             <Flex
-                              justify="space-between"
+                              gap={50}
+                              justify="start"
                               className={screens.xs && "mt-15"}
                             >
                               <Tooltip
@@ -258,43 +223,29 @@ const MainLayout = () => {
                                 trigger={"hover"}
                               >
                                 <Text className="font-xlarge">
-                                  <a href={MAIL_TO}>
+                                  <a href={"quicknftloan@gmail.com"}>
                                     {" "}
-                                    <GrMail
+                                    <IoIosMail
                                       color="#ebe6c8"
                                       className="pointer homepageicon"
+                                      size={40}
                                     />
                                   </a>
                                 </Text>
                               </Tooltip>
-                              <Link target={"_blank"} to={ORDINALS_MEDIUM}>
+
+                              <Link
+                                target={"_blank"}
+                                to={"https://x.com/QuickNFTLoan"}
+                              >
                                 <Text className="font-xlarge pointer">
-                                  <FaMedium
+                                  <FaXTwitter
                                     color="#ebe6c8"
                                     className="homepageicon"
+                                    size={35}
                                   />
                                 </Text>
                               </Link>
-                              <Link target={"_blank"} to={TWITTER_LINK}>
-                                <Text className="font-xlarge pointer">
-                                  <FaSquareXTwitter
-                                    color="#ebe6c8"
-                                    className="homepageicon"
-                                  />
-                                </Text>
-                              </Link>
-                              <Text className="font-xlarge pointer">
-                                <FaTelegram
-                                  color="#ebe6c8"
-                                  className="homepageicon"
-                                />
-                              </Text>
-                              <Text className="font-xlarge pointer">
-                                <SiDiscord
-                                  color="#ebe6c8"
-                                  className="homepageicon"
-                                />
-                              </Text>
                             </Flex>
 
                             {screens.xs ? (
@@ -311,7 +262,7 @@ const MainLayout = () => {
                   </Row>
                 </Footer>
               </>
-            ) : null} */}
+            ) : null}
 
             <div className="value-header">
               <Header className="header z-index">

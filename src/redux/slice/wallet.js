@@ -30,7 +30,6 @@ const walletSlice = createSlice({
         publicKey: null
       }
       state.active = []
-      state.chain = ""
     }
   }
 });
